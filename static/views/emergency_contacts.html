@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비상 연락 - HeartCare</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .header {
+            background-color: #FF6D94;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .back-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .card {
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            color: #FF6D94;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .contact-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .contact-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+            color: #666;
+        }
+        .contact-info {
+            flex: 1;
+        }
+        .contact-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .contact-relation {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .contact-number {
+            font-size: 14px;
+            color: #333;
+        }
+        .contact-actions {
+            display: flex;
+            margin-top: 10px;
+        }
+        .action-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #FF6D94;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            border: none;
+        }
+        .message-button {
+            background-color: #4CAF50;
+        }
+        .priority-badge {
+            padding: 4px 8px;
+            background-color: #FF6D94;
+            color: white;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .button {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #ff5483;
+        }
+        .emergency-button {
+            background-color: #ff5252;
+            margin-bottom: 20px;
+        }
+        .navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-item {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            text-decoration: none;
+        }
+        .nav-item.active {
+            color: #FF6D94;
+            font-weight: bold;
+        }
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .status-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            margin-bottom: 15px;
+        }
+        .toggle-label {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 26px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            border-radius: 34px;
+            transition: .4s;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .4s;
+        }
+        input:checked + .toggle-slider {
+            background-color: #FF6D94;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        .add-contact {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .add-contact:hover {
+            border-color: #FF6D94;
+            color: #FF6D94;
+        }
+        .add-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="fallback.html" class="back-button">←</a>
+            <h1>비상 연락</h1>
+            <div style="width: 20px;"></div>
+        </div>
+
+        <button class="button emergency-button">119 긴급 전화</button>
+
+        <div class="card">
+            <div class="card-title">보호자 관리</div>
+            <div class="status-toggle">
+                <div class="toggle-label">경고 알림 활성화</div>
+                <label class="toggle-switch">
+                    <input type="checkbox" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="contact-card">
+                <div class="contact-avatar">👩</div>
+                <div class="contact-info">
+                    <div class="contact-name">김지영<span class="priority-badge">1순위</span></div>
+                    <div class="contact-relation">배우자</div>
+                    <div class="contact-number">010-1234-5678</div>
+                    <div class="contact-actions">
+                        <button class="action-button">📞</button>
+                        <button class="action-button message-button">✉</button>
+                    </div>
+                </div>
+            </div>
+            <div class="contact-card">
+                <div class="contact-avatar">👨</div>
+                <div class="contact-info">
+                    <div class="contact-name">이민수<span class="priority-badge">2순위</span></div>
+                    <div class="contact-relation">아들</div>
+                    <div class="contact-number">010-2345-6789</div>
+                    <div class="contact-actions">
+                        <button class="action-button">📞</button>
+                        <button class="action-button message-button">✉</button>
+                    </div>
+                </div>
+            </div>
+            <div class="contact-card">
+                <div class="contact-avatar">👨‍⚕️</div>
+                <div class="contact-info">
+                    <div class="contact-name">박의사<span class="priority-badge">3순위</span></div>
+                    <div class="contact-relation">주치의</div>
+                    <div class="contact-number">010-3456-7890</div>
+                    <div class="contact-actions">
+                        <button class="action-button">📞</button>
+                        <button class="action-button message-button">✉</button>
+                    </div>
+                </div>
+            </div>
+            <div class="add-contact">
+                <div class="add-icon">+</div>
+                <div>새 보호자 추가</div>
+            </div>
+            <button class="button">연락처 순서 변경</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">위험 알림 설정</div>
+            <div class="status-toggle">
+                <div class="toggle-label">심박수 이상 알림</div>
+                <label class="toggle-switch">
+                    <input type="checkbox" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="status-toggle">
+                <div class="toggle-label">산소포화도 이상 알림</div>
+                <label class="toggle-switch">
+                    <input type="checkbox" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="status-toggle">
+                <div class="toggle-label">심전도 이상 알림</div>
+                <label class="toggle-switch">
+                    <input type="checkbox" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="status-toggle">
+                <div class="toggle-label">낙상 감지 알림</div>
+                <label class="toggle-switch">
+                    <input type="checkbox">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div style="height: 80px;"></div>
+    </div>
+
+    <div class="navigation">
+        <a href="heart_diagnosis.html" class="nav-item">
+            <div class="nav-icon">❤️</div>
+            <div>심장진단</div>
+        </a>
+        <a href="emergency_guide.html" class="nav-item">
+            <div class="nav-icon">🚑</div>
+            <div>응급처치</div>
+        </a>
+        <a href="emergency_contacts.html" class="nav-item active">
+            <div class="nav-icon">📞</div>
+            <div>비상연락</div>
+        </a>
+        <a href="ai_consultation.html" class="nav-item">
+            <div class="nav-icon">🤖</div>
+            <div>AI 상담</div>
+        </a>
+    </div>
+
+    <script>
+        // 토글 스위치 기능
+        const toggleSwitches = document.querySelectorAll('.toggle-switch input');
+        toggleSwitches.forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                console.log(`Toggle switched to: ${this.checked ? 'ON' : 'OFF'}`);
+            });
+        });
+    </script>
+</body>
+</html>

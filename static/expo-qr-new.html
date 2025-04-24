@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expo Go QR 코드</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #FF6D94;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        
+        p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .qr-image {
+            margin: 20px auto;
+            width: 200px;
+            height: 200px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .expo-url {
+            background-color: #f0f0f0;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        
+        .note {
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
+        }
+        
+        .steps {
+            text-align: left;
+            margin: 20px 0;
+        }
+        
+        .steps ol {
+            padding-left: 20px;
+        }
+        
+        .steps li {
+            margin-bottom: 10px;
+        }
+        
+        .back-link {
+            margin-top: 20px;
+            color: #FF6D94;
+            text-decoration: none;
+        }
+        
+        .button {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 15px 0;
+        }
+        
+        .button-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .tab-button.active {
+            color: #FF6D94;
+            border-bottom: 2px solid #FF6D94;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 15px 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .manual-instructions {
+            text-align: left;
+            margin: 15px 0;
+        }
+        
+        .instruction-step {
+            margin-bottom: 15px;
+        }
+        
+        .instruction-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background-color: #FF6D94;
+            color: white;
+            border-radius: 50%;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .video-link {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-decoration: none;
+            color: #333;
+        }
+        
+        .video-icon {
+            font-size: 24px;
+            color: #FF6D94;
+            margin-right: 15px;
+        }
+        
+        .video-info {
+            flex: 1;
+        }
+        
+        .video-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .video-source {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Expo Go로 연결하기</h1>
+        <p>아이폰에서 HeartCare 앱을 Expo Go를 통해 접속하는 방법입니다.</p>
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab('manualTab')">직접 입력</button>
+            <button class="tab-button" onclick="openTab('videosTab')">영상 가이드</button>
+            <button class="tab-button" onclick="openTab('expoAppTab')">웹 버전</button>
+        </div>
+        
+        <div id="manualTab" class="tab-content active">
+            <div class="manual-instructions">
+                <div class="instruction-step">
+                    <span class="instruction-number">1</span>
+                    아이폰에서 App Store를 통해 <strong>Expo Go</strong> 앱을 설치합니다.
+                </div>
+                <div class="instruction-step">
+                    <span class="instruction-number">2</span>
+                    Expo Go 앱을 열고 하단의 "프로필" 탭을 선택합니다.
+                </div>
+                <div class="instruction-step">
+                    <span class="instruction-number">3</span>
+                    "URL로 열기" 버튼을 터치합니다.
+                </div>
+                <div class="instruction-step">
+                    <span class="instruction-number">4</span>
+                    아래 URL을 복사하여 입력창에 붙여넣기합니다:
+                </div>
+            </div>
+            
+            <div class="expo-url">
+                exp://u.expo.dev/d58c2cd2-f677-439a-b084-9a1c9eb51ebe
+            </div>
+            
+            <div class="instruction-step">
+                <span class="instruction-number">5</span>
+                "열기" 버튼을 터치하면 HeartCare 앱이 실행됩니다.
+            </div>
+        </div>
+        
+        <div id="videosTab" class="tab-content">
+            <p>아래 영상들을 참조하여 Expo Go 앱 설치 및 연결 방법을 확인하세요:</p>
+            
+            <a href="https://youtu.be/pl2lJZ-yTX4" class="video-link" target="_blank">
+                <div class="video-icon">📱</div>
+                <div class="video-info">
+                    <div class="video-title">Expo Go 앱으로 React Native 프로젝트 실행하기</div>
+                    <div class="video-source">YouTube - React Native 튜토리얼</div>
+                </div>
+            </a>
+            
+            <a href="https://www.youtube.com/watch?v=ByzbPwSMCe0" class="video-link" target="_blank">
+                <div class="video-icon">⌚</div>
+                <div class="video-info">
+                    <div class="video-title">Apple Watch로 건강 데이터 측정하고 앱에 연동하기</div>
+                    <div class="video-source">YouTube - Apple 개발자 채널</div>
+                </div>
+            </a>
+            
+            <a href="https://www.youtube.com/watch?v=vQKPlwhUTu4" class="video-link" target="_blank">
+                <div class="video-icon">🔧</div>
+                <div class="video-info">
+                    <div class="video-title">Expo Go 앱 연결 문제 해결하기</div>
+                    <div class="video-source">YouTube - 모바일 앱 개발 팁</div>
+                </div>
+            </a>
+            
+            <a href="/youtube-resources.html" class="button button-secondary">더 많은 도움말 보기</a>
+        </div>
+        
+        <div id="expoAppTab" class="tab-content">
+            <p>Expo Go 앱이 설치되지 않거나 접속에 문제가 있다면, 웹 버전으로 접속할 수 있습니다.</p>
+            <p>웹 버전은 일부 센서 기능이 제한될 수 있지만, 기본적인 기능을 사용할 수 있습니다.</p>
+            
+            <a href="/expo-app.html" class="button">웹 버전으로 열기</a>
+            
+            <p class="note">Safari 브라우저를 사용하면 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.</p>
+        </div>
+        
+        <p class="note">Apple Watch 연동을 위해서는 Expo Go 앱을 통한 접속이 필요합니다.</p>
+        
+        <a href="/" class="back-link">메인 페이지로 돌아가기</a>
+    </div>
+
+    <script>
+        function openTab(tabName) {
+            var i, tabcontent, tabbuttons;
+            
+            // 모든 탭 콘텐츠 숨기기
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+            
+            // 모든 탭 버튼 비활성화
+            tabbuttons = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].classList.remove("active");
+            }
+            
+            // 선택한 탭 표시 및 버튼 활성화
+            document.getElementById(tabName).classList.add("active");
+            event.currentTarget.classList.add("active");
+        }
+    </script>
+</body>
+</html>

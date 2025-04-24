@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0; url=exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0">
+    <title>HeartCare Expo 연결 중...</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #FF6D94;
+            margin-bottom: 20px;
+        }
+        .loading {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 109, 148, 0.3);
+            border-radius: 50%;
+            border-top-color: #FF6D94;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .link {
+            margin-top: 30px;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #FF6D94;
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HeartCare Expo 연결 중...</h1>
+        <div class="loading"></div>
+        <p>Expo Go 앱으로 자동 연결 중입니다...</p>
+        <p>자동 연결이 되지 않는 경우 아래 링크를 직접 클릭하세요:</p>
+        
+        <div class="link">
+            <a href="exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0">Expo 앱으로 연결하기</a>
+        </div>
+    </div>
+    
+    <script>
+        // 페이지 로드 시 자동으로 Expo 앱 열기 시도
+        window.onload = function() {
+            window.location.href = "exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0";
+        }
+    </script>
+</body>
+</html>

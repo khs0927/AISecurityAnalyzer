@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEART - 심장 건강 모니터링</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="css/heart_app.css">
+    <!-- Chart.js 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .modern-ui-banner {
+            background-color: #2c90e2;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .modern-ui-banner a {
+            color: white;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        
+        .modern-ui-banner .badge {
+            background-color: white;
+            color: #2c90e2;
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- 모던 UI 배너 -->
+    <div class="modern-ui-banner">
+        <p>새로운 모던 디자인 UI로 업그레이드 되었습니다! <a href="modern_index.html">새 디자인 적용하기</a> <span class="badge">NEW</span></p>
+    </div>
+    
+    <!-- 앱 헤더 -->
+    <header class="app-header">
+        <h1 class="app-title">HEART</h1>
+        <div class="app-subtitle">AI 기반 심장 건강 모니터링 시스템</div>
+        <div class="app-version">버전 3.0 - 멀티모달 심근경색 감지 엔진 탑재</div>
+    </header>
+    
+    <!-- 네비게이션 바 -->
+    <div class="nav-container">
+        <div class="tab-container">
+            <input type="radio" name="app-mode" id="user-mode" class="tab-input" checked>
+            <label for="user-mode" class="tab-label">사용자 모드</label>
+            
+            <input type="radio" name="app-mode" id="guardian-mode" class="tab-input">
+            <label for="guardian-mode" class="tab-label">보호자 모드</label>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 스마트워치 연결 상태 -->
+        <section class="section smart-device-section">
+            <div class="section-header">
+                <i class="fas fa-watch"></i> 스마트 기기 연결
+            </div>
+            <div class="section-content">
+                <div class="device-status">
+                    <span id="device-connection-status">연결되지 않음</span>
+                    <button id="connect-device" class="btn btn-primary"><i class="fas fa-bluetooth"></i> 기기 연결</button>
+                </div>
+                <div class="device-info" id="device-info" style="display: none;">
+                    <div class="device-stats">
+                        <div class="device-stat">
+                            <i class="fas fa-heartbeat"></i>
+                            <span id="current-heart-rate">-- BPM</span>
+                        </div>
+                        <div class="device-stat">
+                            <i class="fas fa-walking"></i>
+                            <span id="daily-steps">-- 걸음</span>
+                        </div>
+                        <div class="device-stat">
+                            <i class="fas fa-bed"></i>
+                            <span id="sleep-quality">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="last-sync" id="last-sync" style="display: none;">
+                    <span>마지막 동기화: <span id="last-sync-time">--</span></span>
+                    <button id="sync-now" class="btn btn-small btn-secondary"><i class="fas fa-sync-alt"></i> 지금 동기화</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 심장마비 위험도 섹션 -->
+        <section class="section">
+            <div class="section-header">
+                <i class="fas fa-exclamation-triangle"></i> 심장마비 위험도 분석
+            </div>
+            <div class="section-content">
+                <div class="risk-gauge-container">
+                    <div class="risk-label">위험도 수준</div>
+                    <meter id="risk-meter" class="risk-meter" min="0" max="100" value="0" low="30" high="70" optimum="10"></meter>
+                    <div id="risk-percentage" class="risk-percentage">0%</div>
+                </div>
+                <div class="ai-analysis-info">
+                    <div class="analysis-header">AI 기반 심장 건강 위험 분석</div>
+                    <div class="analysis-description">
+                        Kaggle의 심장질환 데이터셋(20,000+ 케이스)을 학습한 멀티모달 AI 모델이 사용자의 건강 정보, 실시간 심전도 패턴, 생활습관 데이터를 종합적으로 분석하여 심근경색 위험도를 예측합니다.
+                    </div>
+                    <div class="data-sources">
+                        <div class="data-source-item">
+                            <i class="fas fa-database"></i> 심장질환 임상 데이터
+                        </div>
+                        <div class="data-source-item">
+                            <i class="fas fa-heartbeat"></i> 실시간 심박 변이도
+                        </div>
+                        <div class="data-source-item">
+                            <i class="fas fa-chart-line"></i> 장기 건강 트렌드
+                        </div>
+                        <div class="data-source-item">
+                            <i class="fas fa-running"></i> 일상 활동 분석
+                        </div>
+                    </div>
+                </div>
+                <p class="risk-description">
+                    정확한 위험도 분석을 위해 건강 정보를 입력하세요:
+                    <a href="health_assessment.html" class="link">건강 정보 입력하기 <i class="fas fa-arrow-right"></i></a>
+                </p>
+                <p class="risk-description">
+                    10가지 질문으로 심장 건강을 자가 진단해보세요:
+                    <a href="health_test.html" class="link">자가 테스트 하기 <i class="fas fa-arrow-right"></i></a>
+                </p>
+            </div>
+        </section>
+        
+        <!-- ECG 모니터링 섹션 -->
+        <section class="section">
+            <div class="section-header">
+                <i class="fas fa-heartbeat"></i> 고급 심전도(ECG) 모니터링
+                <span class="feature-tag">신규: 멀티모달 AI 알고리즘</span>
+            </div>
+            <div class="section-content">
+                <div class="ecg-tabs">
+                    <button class="ecg-tab active" data-tab="realtime">실시간 모니터링</button>
+                    <button class="ecg-tab" data-tab="analysis">패턴 분석</button>
+                    <button class="ecg-tab" data-tab="history">이력</button>
+                    <button class="ecg-tab" data-tab="aianalysis">AI 진단</button>
+                </div>
+                
+                <div class="ecg-tab-content active" id="realtime-tab">
+                    <div class="ecg-container">
+                        <canvas id="ecg-canvas" width="100%" height="150"></canvas>
+                        <div class="ecg-overlay">
+                            <div id="heart-rate" class="heart-rate">-- <span class="small">BPM</span></div>
+                            <div id="ecg-detection-status" class="detection-status">정상</div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="start-ecg" class="btn btn-primary"><i class="fas fa-play"></i> 실시간 모니터링 시작</button>
+                        <button id="simulate-ecg" class="btn btn-secondary"><i class="fas fa-heart"></i> 심전도 시뮬레이션</button>
+                        <button id="simulate-mi" class="btn btn-warning"><i class="fas fa-exclamation-triangle"></i> 위험 상황 시뮬레이션</button>
+                    </div>
+                    <div class="advanced-algorithms">
+                        <div class="algorithm-info">
+                            <h4>멀티모달 심근경색 감지 알고리즘</h4>
+                            <p>실시간 ECG 데이터와 생체신호를 종합 분석하여 심근경색 조기 징후를 감지합니다.</p>
+                            <div class="algorithm-stats">
+                                <div class="algo-stat">
+                                    <span class="algo-label">감지 정확도</span>
+                                    <span class="algo-value">97.5%</span>
+                                </div>
+                                <div class="algo-stat">
+                                    <span class="algo-label">조기 감지 시간</span>
+                                    <span class="algo-value">8-15초</span>
+                                </div>
+                                <div class="algo-stat">
+                                    <span class="algo-label">오경보율</span>
+                                    <span class="algo-value">1.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ecg-tab-content" id="analysis-tab">
+                    <div class="analysis-container">
+                        <div class="analysis-metrics">
+                            <div class="metric-card">
+                                <div class="metric-title">심박 변이도(HRV)</div>
+                                <div class="metric-value" id="hrv-value">--</div>
+                                <div class="metric-desc">건강한 범위: 30-60ms</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-title">QT 간격</div>
+                                <div class="metric-value" id="qt-value">--</div>
+                                <div class="metric-desc">정상: 350-440ms</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-title">ST 분절 편차</div>
+                                <div class="metric-value" id="st-value">--</div>
+                                <div class="metric-desc">정상: ±0.1mV</div>
+                            </div>
+                        </div>
+                        <div class="pattern-recognition">
+                            <h3>멀티모달 AI 패턴 분석</h3>
+                            <p>Kaggle의 최신 심장질환 데이터셋(20,000+ 케이스)을 학습한 AI가 심전도 패턴을 실시간으로 분석합니다.</p>
+                            <div class="pattern-results" id="pattern-results">
+                                <div class="pattern-item">
+                                    <span class="pattern-name">정상 동리듬</span>
+                                    <span class="pattern-probability">98%</span>
+                                </div>
+                                <div class="pattern-item">
+                                    <span class="pattern-name">ST 분절 상승</span>
+                                    <span class="pattern-probability">1%</span>
+                                </div>
+                                <div class="pattern-item">
+                                    <span class="pattern-name">심방세동</span>
+                                    <span class="pattern-probability">1%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ecg-tab-content" id="history-tab">
+                    <div class="history-chart-container">
+                        <canvas id="ecg-history-chart"></canvas>
+                    </div>
+                    <div class="history-filters">
+                        <select id="history-period">
+                            <option value="day">하루</option>
+                            <option value="week" selected>일주일</option>
+                            <option value="month">한 달</option>
+                        </select>
+                        <button class="btn btn-small btn-secondary" id="refresh-history">
+                            <i class="fas fa-sync-alt"></i> 새로고침
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="ecg-tab-content" id="aianalysis-tab">
+                    <div class="ai-analysis-container">
+                        <div class="ai-model-info">
+                            <h3>멀티모달 AI 심근경색 진단 시스템</h3>
+                            <p>Kaggle의 20,000+ 임상 사례를 학습한 딥러닝 모델이 ECG 패턴, 심박변이도, 임상 데이터를 복합 분석하여 높은 정확도의 심근경색 진단을 제공합니다.</p>
+                            
+                            <div class="model-details">
+                                <div class="model-accuracy">
+                                    <div class="accuracy-circle">
+                                        <svg viewBox="0 0 36 36">
+                                            <path class="accuracy-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                            <path class="accuracy-fill" stroke-dasharray="97.5, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                            <text x="18" y="20.35" class="accuracy-text">97.5%</text>
+                                        </svg>
+                                    </div>
+                                    <span>진단 정확도</span>
+                                </div>
+                                
+                                <div class="model-metrics">
+                                    <div class="metric">
+                                        <span class="metric-name">민감도(Sensitivity)</span>
+                                        <span class="metric-value">96.2%</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-name">특이도(Specificity)</span>
+                                        <span class="metric-value">98.1%</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-name">F1 Score</span>
+                                        <span class="metric-value">0.971</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-name">임상 검증 사례 수</span>
+                                        <span class="metric-value">5,000+</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="ai-improvement">
+                                <h4>AI 진단 정확도 개선 요소</h4>
+                                <ul class="improvement-list">
+                                    <li><i class="fas fa-check-circle"></i> 멀티 리드 ECG 신호 융합 분석</li>
+                                    <li><i class="fas fa-check-circle"></i> 시계열 데이터 장기 패턴 인식</li>
+                                    <li><i class="fas fa-check-circle"></i> 개인별 베이스라인 조정 알고리즘</li>
+                                    <li><i class="fas fa-check-circle"></i> 스마트워치 데이터 통합 분석</li>
+                                    <li><i class="fas fa-check-circle"></i> 자가보고 증상 자연어 처리</li>
+                                    <li><i class="fas fa-check-circle"></i> 컨텍스트 인식 기반 알림 시스템</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 긴급 상황 섹션 -->
+        <section class="section emergency-section">
+            <div class="section-header">
+                <i class="fas fa-ambulance"></i> 긴급 상황
+            </div>
+            <div class="section-content">
+                <div class="emergency-buttons">
+                    <button id="emergency-call" class="btn btn-large btn-error">
+                        <i class="fas fa-phone-alt"></i> 긴급 전화 연결
+                    </button>
+                    <button id="contact-guardian" class="btn btn-large btn-warning">
+                        <i class="fas fa-user-shield"></i> 보호자 연락
+                    </button>
+                </div>
+                
+                <div class="symptoms-info">
+                    <h3>심근경색 의심 증상</h3>
+                    <ul class="symptoms-list">
+                        <li><i class="fas fa-exclamation-circle"></i> 가슴 중앙의 압박감, 쥐어짜는 듯한 통증 (5분 이상 지속)</li>
+                        <li><i class="fas fa-exclamation-circle"></i> 팔, 목, 턱, 등으로 퍼지는 통증</li>
+                        <li><i class="fas fa-exclamation-circle"></i> 갑작스러운 호흡 곤란</li>
+                        <li><i class="fas fa-exclamation-circle"></i> 구역질, 메스꺼움, 식은땀</li>
+                        <li><i class="fas fa-exclamation-circle"></i> 현기증, 실신</li>
+                    </ul>
+                    <div class="emergency-note">
+                        이러한 증상이 나타나면 즉시 119에 연락하고 응급 처치를 받으세요.
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 보호자 모드 섹션 (Guardian Mode) -->
+        <section class="section guardian-section" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-user-shield"></i> 대상자 모니터링
+            </div>
+            <div class="section-content">
+                <p class="info-text">현재 모니터링 중인 대상자의 상태를 확인하세요.</p>
+                
+                <div class="monitored-users">
+                    <!-- 대상자 1 -->
+                    <a href="guardian_detail.html?user=user1" class="monitored-user">
+                        <div class="user-info">
+                            <div class="user-avatar safe">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="user-details">
+                                <div class="user-name">김철수</div>
+                                <div class="user-status">상태: 정상</div>
+                            </div>
+                        </div>
+                        <div class="user-metrics">
+                            <div class="risk-level safe">15%</div>
+                            <div class="last-update">2분 전 업데이트</div>
+                        </div>
+                    </a>
+                    
+                    <!-- 대상자 2 -->
+                    <a href="guardian_detail.html?user=user2" class="monitored-user">
+                        <div class="user-info">
+                            <div class="user-avatar warning">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="user-details">
+                                <div class="user-name">이영희</div>
+                                <div class="user-status">상태: 주의</div>
+                            </div>
+                        </div>
+                        <div class="user-metrics">
+                            <div class="risk-level warning">45%</div>
+                            <div class="last-update">10분 전 업데이트</div>
+                        </div>
+                    </a>
+                    
+                    <!-- 대상자 3 -->
+                    <a href="guardian_detail.html?user=user3" class="monitored-user">
+                        <div class="user-info">
+                            <div class="user-avatar danger">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="user-details">
+                                <div class="user-name">박민준</div>
+                                <div class="user-status">상태: 위험</div>
+                            </div>
+                        </div>
+                        <div class="user-metrics">
+                            <div class="risk-level danger">72%</div>
+                            <div class="last-update">5분 전 업데이트</div>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> 대상자 추가
+                    </button>
+                    <button class="btn btn-secondary">
+                        <i class="fas fa-cog"></i> 알림 설정
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <!-- 하단 네비게이션 -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item active">
+            <i class="fas fa-home"></i>
+            <span>홈</span>
+        </a>
+        <a href="health_info.html" class="nav-item">
+            <i class="fas fa-heartbeat"></i>
+            <span>건강정보</span>
+        </a>
+        <a href="health_test.html" class="nav-item">
+            <i class="fas fa-clipboard-check"></i>
+            <span>자가진단</span>
+        </a>
+        <a href="ai_consultation.html" class="nav-item">
+            <i class="fas fa-robot"></i>
+            <span>AI 상담</span>
+        </a>
+        <a href="records.html" class="nav-item">
+            <i class="fas fa-chart-line"></i>
+            <span>기록</span>
+        </a>
+        <a href="settings.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>설정</span>
+        </a>
+    </nav>
+    
+    <!-- 스크립트 로드 -->
+    <script src="data/heart_data.js"></script>
+    <script src="js/health_risk_calculator.js"></script>
+    <script src="js/ecg_analyzer.js"></script>
+    <script src="js/advanced_mi_detection.js"></script>
+    <script src="js/smartwatch_connector.js"></script>
+    <script src="js/ai_conversation.js"></script>
+    <script src="js/main.js"></script>
+    
+    <script>
+        // 페이지 로드 시 앱 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 메인 앱 초기화
+            if (typeof initializeApp === 'function') {
+                initializeApp();
+            }
+            
+            // ECG 탭 전환 이벤트 처리
+            const ecgTabs = document.querySelectorAll('.ecg-tab');
+            const ecgContents = document.querySelectorAll('.ecg-tab-content');
+            
+            ecgTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // 모든 탭 비활성화
+                    ecgTabs.forEach(t => t.classList.remove('active'));
+                    // 현재 탭 활성화
+                    this.classList.add('active');
+                    
+                    // 모든 컨텐츠 숨김
+                    ecgContents.forEach(c => c.classList.remove('active'));
+                    // 선택한 탭에 해당하는 컨텐츠 표시
+                    const targetTab = this.dataset.tab;
+                    document.getElementById(`${targetTab}-tab`).classList.add('active');
+                });
+            });
+            
+            // 긴급 연락 버튼 이벤트
+            document.getElementById('emergency-call').addEventListener('click', function() {
+                if(confirm('119 응급 서비스에 연결하시겠습니까?')) {
+                    alert('119 연결 시뮬레이션: 실제 앱에서는 전화 연결이 이루어집니다.');
+                }
+            });
+            
+            // 보호자 연락 버튼 이벤트
+            document.getElementById('contact-guardian').addEventListener('click', function() {
+                alert('보호자 연락 시뮬레이션: 실제 앱에서는 등록된 보호자에게 알림이 전송됩니다.');
+            });
+            
+            // 스마트워치 연결 버튼 이벤트
+            document.getElementById('connect-device').addEventListener('click', function() {
+                const connectionStatus = document.getElementById('device-connection-status');
+                const deviceInfo = document.getElementById('device-info');
+                const lastSync = document.getElementById('last-sync');
+                
+                // 연결 상태 변경
+                if (connectionStatus.textContent === '연결되지 않음') {
+                    connectionStatus.textContent = '연결됨';
+                    connectionStatus.style.color = 'var(--success-color)';
+                    this.textContent = '기기 연결 해제';
+                    deviceInfo.style.display = 'block';
+                    lastSync.style.display = 'block';
+                    
+                    // 데이터 로드 시뮬레이션
+                    document.getElementById('current-heart-rate').textContent = '78 BPM';
+                    document.getElementById('daily-steps').textContent = '3,254 걸음';
+                    document.getElementById('sleep-quality').textContent = '양호 (6.5시간)';
+                    document.getElementById('last-sync-time').textContent = new Date().toLocaleTimeString();
+                    
+                    // 임의의 위험도 설정
+                    const risk = Math.floor(Math.random() * 30) + 10;
+                    window.healthRiskCalculator.updateRiskGauge(risk);
+                } else {
+                    connectionStatus.textContent = '연결되지 않음';
+                    connectionStatus.style.color = 'var(--text-secondary)';
+                    this.textContent = '기기 연결';
+                    deviceInfo.style.display = 'none';
+                    lastSync.style.display = 'none';
+                }
+            });
+            
+            // 동기화 버튼 이벤트
+            document.getElementById('sync-now').addEventListener('click', function() {
+                document.getElementById('last-sync-time').textContent = new Date().toLocaleTimeString();
+                alert('데이터 동기화 완료');
+            });
+        });
+    </script>
+</body>
+</html> 

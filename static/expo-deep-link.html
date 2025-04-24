@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare Expo 딥 링크</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        h1 { 
+            color: #FF6D94; 
+            margin-bottom: 25px;
+        }
+        .link-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .url-display {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 12px;
+            border-radius: 5px;
+            overflow-x: auto;
+            word-break: break-all;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .button.secondary {
+            background-color: #4630EB;
+        }
+        .note {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            text-align: left;
+        }
+        #countdown {
+            font-weight: bold;
+            color: #FF6D94;
+        }
+    </style>
+</head>
+<body>
+    <h1>HeartCare Expo 딥 링크</h1>
+    
+    <div class="link-container">
+        <h2>직접 연결 URL</h2>
+        
+        <div class="url-display" id="directUrl">exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0</div>
+        
+        <button onclick="copyToClipboard()" class="button">URL 복사하기</button>
+        <button onclick="openExpoUrl()" class="button secondary">직접 열기 시도</button>
+        
+        <p id="countdown">10초 내에 자동으로 연결을 시도합니다...</p>
+        
+        <div class="note">
+            <p><strong>참고:</strong> 위 URL을 복사하여 Expo Go 앱에서 직접 붙여넣기할 수도 있습니다.</p>
+            <p>Expo Go 앱을 열고 오른쪽 하단의 '프로필' 탭 클릭 → 상단의 'Enter URL manually' 선택 → URL 붙여넣기</p>
+        </div>
+    </div>
+    
+    <div class="link-container">
+        <h2>대체 연결 방법</h2>
+        
+        <button onclick="tryAlternativeScheme('expo://')" class="button">방법 1: expo:// 스킴으로 시도</button>
+        <button onclick="tryAlternativeScheme('exps://')" class="button">방법 2: exps:// 스킴으로 시도</button>
+        <button onclick="tryAlternativeScheme('https://exp.host/@hsml/heart-care-expo')" class="button secondary">방법 3: https 링크로 시도</button>
+        
+        <p>여러 방법을 차례로 시도해보세요.</p>
+    </div>
+    
+    <div class="link-container">
+        <h2>문제가 계속되나요?</h2>
+        <p>다음 대체 링크로 시도해보세요:</p>
+        
+        <div class="url-display">exp://u.expo.dev/update/heart-care-expo?runtime-version=exposdk:50.0.0</div>
+        
+        <button onclick="useAlternativeUrl()" class="button">대체 URL로 시도</button>
+        
+        <p>또는 <a href="/mobile-guide.html" style="color: #FF6D94; font-weight: bold;">전체 연결 가이드</a>를 확인하세요.</p>
+    </div>
+
+    <script>
+        // URL 복사 기능
+        function copyToClipboard() {
+            const url = document.getElementById('directUrl').innerText;
+            
+            navigator.clipboard.writeText(url).then(function() {
+                alert('URL이 클립보드에 복사되었습니다!');
+            }, function(err) {
+                alert('클립보드 복사 중 오류가 발생했습니다: ' + err);
+            });
+        }
+        
+        // 직접 Expo URL 열기
+        function openExpoUrl() {
+            const url = document.getElementById('directUrl').innerText;
+            window.location.href = url;
+        }
+        
+        // 대체 스킴으로 시도
+        function tryAlternativeScheme(scheme) {
+            const baseUrl = 'exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0';
+            const fullUrl = scheme + baseUrl.replace('exp.host', '');
+            
+            try {
+                window.location.href = fullUrl;
+                setTimeout(function() {
+                    alert(`${scheme} 스킴으로 연결을 시도했습니다. Expo Go 앱이 열리지 않으면 다른 방법을 시도하세요.`);
+                }, 500);
+            } catch (e) {
+                alert('연결 시도 중 오류가 발생했습니다: ' + e.message);
+            }
+        }
+        
+        // 대체 URL 사용
+        function useAlternativeUrl() {
+            const alternativeUrl = 'exp://u.expo.dev/update/heart-care-expo?runtime-version=exposdk:50.0.0';
+            window.location.href = alternativeUrl;
+        }
+        
+        // 카운트다운 타이머
+        let countdown = 10;
+        const countdownElement = document.getElementById('countdown');
+        
+        const timer = setInterval(function() {
+            countdown--;
+            countdownElement.textContent = `${countdown}초 내에 자동으로 연결을 시도합니다...`;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                countdownElement.textContent = '연결 시도 중...';
+                
+                // iOS 기기 감지
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                
+                // 기기별 최적 연결 방법 선택
+                if (isIOS) {
+                    window.location.href = 'exps://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0';
+                } else {
+                    window.location.href = 'exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0';
+                }
+            }
+        }, 1000);
+        
+        // 페이지 로드 시 직접 연결 시도 (iOS 친화적 지연)
+        window.onload = function() {
+            // URL 파라미터에서 직접 연결 여부 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            const directConnect = urlParams.get('direct');
+            
+            if (directConnect === 'true') {
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                
+                setTimeout(function() {
+                    if (isIOS) {
+                        window.location.href = 'exps://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0';
+                    } else {
+                        window.location.href = 'exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0';
+                    }
+                }, 1000);
+            }
+        };
+    </script>
+</body>
+</html>

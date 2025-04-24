@@ -1,0 +1,244 @@
+        
+        {/* Guardian Mode Tab */}
+        <TabsContent value="guardian-mode" className="space-y-4 py-4">
+          <Card className="p-5">
+            <h2 className="text-lg font-semibold mb-4">보호자 모드</h2>
+            
+            <div className="space-y-4">
+              <div className="bg-blue-50 rounded-xl p-4 mb-4">
+                <p className="text-sm text-blue-600">
+                  보호자 모드에서는 모니터링 중인 대상자의 건강 상태를 실시간으로 확인하고, 위험 상황 발생 시 즉시 대응할 수 있습니다.
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium">보호자 모드 활성화</h3>
+                    <p className="text-xs text-[#507695]">이 설정을 켜면 나는 다른 사용자의 보호자로 활동합니다.</p>
+                  </div>
+                  <Switch checked={true} />
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium">HEART 보호자 접근 허용</h3>
+                    <p className="text-xs text-[#507695]">등록된 보호자가 내 건강 데이터를 볼 수 있도록 허용합니다.</p>
+                  </div>
+                  <Switch checked={true} />
+                </div>
+              </div>
+              
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  toast({
+                    title: "보호자 모드로 전환됨",
+                    description: "보호자 모드로 전환되었습니다. 모니터링 중인 대상자를 확인하세요."
+                  });
+                  window.location.href = '/guardian';
+                }}
+              >
+                보호자 모드로 이동
+              </Button>
+            </div>
+          </Card>
+          
+          <Card className="p-5">
+            <h2 className="text-lg font-semibold mb-4">모니터링 중인 대상자</h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-center p-3 bg-[#f8fafb] rounded-xl">
+                <div className="w-12 h-12 rounded-full bg-gray-300 mr-3 overflow-hidden">
+                  <img src="https://randomuser.me/api/portraits/women/1.jpg" alt="이서연" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center">
+                    <h3 className="text-sm font-medium">이서연</h3>
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-red-50 text-red-600 rounded-full">
+                      위험
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#507695]">48세 · 여성 · 심장질환, 고혈압</p>
+                </div>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  상세보기
+                </Button>
+              </div>
+              
+              <div className="flex items-center p-3 bg-[#f8fafb] rounded-xl">
+                <div className="w-12 h-12 rounded-full bg-gray-300 mr-3 overflow-hidden">
+                  <img src="https://randomuser.me/api/portraits/men/2.jpg" alt="김민준" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center">
+                    <h3 className="text-sm font-medium">김민준</h3>
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-600 rounded-full">
+                      주의
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#507695]">65세 · 남성 · 고혈압</p>
+                </div>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  상세보기
+                </Button>
+              </div>
+              
+              <div className="flex items-center p-3 bg-[#f8fafb] rounded-xl">
+                <div className="w-12 h-12 rounded-full bg-gray-300 mr-3 overflow-hidden">
+                  <img src="https://randomuser.me/api/portraits/women/3.jpg" alt="박지현" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center">
+                    <h3 className="text-sm font-medium">박지현</h3>
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-50 text-green-600 rounded-full">
+                      정상
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#507695]">42세 · 여성 · 당뇨</p>
+                </div>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  상세보기
+                </Button>
+              </div>
+              
+              <Button variant="outline" className="w-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                모니터링 대상자 추가
+              </Button>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Medication Tab */}
+        <TabsContent value="medication" className="space-y-4 py-4">
+          <Card className="p-5">
+            <h2 className="text-lg font-semibold mb-4">약물 관리</h2>
+            
+            <div className="space-y-4">
+              <div className="bg-blue-50 rounded-xl p-4 mb-4">
+                <p className="text-sm text-blue-600">
+                  약물 검색을 통해 복용중인 약물에 관한 정보를 확인하고 관리할 수 있습니다.
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium">약물 복용 알림</h3>
+                    <p className="text-xs text-[#507695]">복용 시간에 맞춰 복용해야 할 약물 알림을 받습니다.</p>
+                  </div>
+                  <Switch checked={true} />
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium">약물 부작용 모니터링</h3>
+                    <p className="text-xs text-[#507695]">약물 복용 후 발생할 수 있는 부작용을 모니터링합니다.</p>
+                  </div>
+                  <Switch checked={true} />
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium">약물 상호작용 알림</h3>
+                    <p className="text-xs text-[#507695]">함께 복용 시 위험할 수 있는 약물 조합을 알려줍니다.</p>
+                  </div>
+                  <Switch checked={true} />
+                </div>
+              </div>
+              
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  toast({
+                    title: "약물 검색 페이지로 이동",
+                    description: "약물 검색 페이지로 이동합니다."
+                  });
+                  window.location.href = '/medication-search';
+                }}
+              >
+                약물 검색하기
+              </Button>
+            </div>
+          </Card>
+          
+          <Card className="p-5">
+            <h2 className="text-lg font-semibold mb-4">현재 복용 중인 약물</h2>
+            
+            <div className="space-y-4">
+              <div className="rounded-xl overflow-hidden border">
+                <div className="flex items-center bg-primary/5 p-3">
+                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium">아스피린</h3>
+                    <p className="text-xs text-[#507695]">100mg, 1일 1회 (아침)</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </Button>
+                </div>
+                <div className="p-3 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      <Badge className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-0">심장질환</Badge>
+                      <Badge className="bg-amber-50 text-amber-600 hover:bg-amber-100 border-0">혈전예방</Badge>
+                    </div>
+                    <span className="text-xs text-gray-500">처방: 2024.03.15</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="rounded-xl overflow-hidden border">
+                <div className="flex items-center bg-primary/5 p-3">
+                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium">메트포르민</h3>
+                    <p className="text-xs text-[#507695]">500mg, 1일 2회 (아침, 저녁)</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </Button>
+                </div>
+                <div className="p-3 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      <Badge className="bg-green-50 text-green-600 hover:bg-green-100 border-0">당뇨</Badge>
+                    </div>
+                    <span className="text-xs text-gray-500">처방: 2024.03.15</span>
+                  </div>
+                </div>
+              </div>
+              
+              <Button variant="outline" className="w-full" onClick={() => window.location.href = '/medication-search'}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                약물 추가
+              </Button>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Medical Information Tab */}
+        <TabsContent value="medical" className="space-y-4 py-4">

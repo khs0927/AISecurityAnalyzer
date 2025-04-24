@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare Mobile 접속 가이드</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #FF6D94;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .option-box {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .option-title {
+            font-weight: bold;
+            color: #FF6D94;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .primary-button {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 0;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .secondary-button {
+            background-color: #f0f0f0;
+            color: #333;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+        }
+        
+        .steps {
+            text-align: left;
+        }
+        
+        .step {
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            background-color: #FF6D94;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .tip {
+            font-style: italic;
+            color: #666;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        
+        .qr-code {
+            margin: 20px 0;
+            max-width: 200px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>낫 투데이 HeartCare</h1>
+        <p class="subtitle">심장 건강 모니터링 애플리케이션</p>
+        
+        <!-- 로고 대신 하트 아이콘 -->
+        <div style="font-size: 60px; margin-bottom: 20px;">❤️</div>
+        
+        <p>HeartCare 모바일 앱에 접속하는 방법을 선택하세요:</p>
+        
+        <div class="option-box">
+            <div class="option-title">옵션 1: Expo Go 앱으로 접속</div>
+            <div class="steps">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    App Store에서 <strong>Expo Go</strong> 앱을 설치하세요.
+                </div>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    아래 버튼을 눌러 QR 코드를 스캔하거나 직접 링크를 입력하세요.
+                </div>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    Bluetooth 권한을 허용하여 스마트워치와 연결하세요.
+                </div>
+            </div>
+            <p class="tip">Expo Go를 사용하면 Apple Watch 연동이 가능합니다.</p>
+        </div>
+        
+        <div class="option-box">
+            <div class="option-title">옵션 2: 웹 버전으로 접속</div>
+            <div class="steps">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    Safari 브라우저에서 바로 사용할 수 있습니다.
+                </div>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    아래 버튼을 클릭하면 웹 버전이 열립니다.
+                </div>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    홈 화면에 추가하여 앱처럼 사용할 수 있습니다.
+                </div>
+            </div>
+            <p class="tip">웹 버전은 일부 센서 기능이 제한될 수 있습니다.</p>
+        </div>
+        
+        <a href="/expo-qr.html" class="primary-button">Expo Go QR 코드 보기</a>
+        <a href="/expo-app.html" class="secondary-button">웹 버전으로 열기</a>
+        <a href="/iphone-guide.html" class="secondary-button">아이폰 접속 가이드 보기</a>
+        <a href="/youtube-resources.html" class="secondary-button">유튜브 & 도움말 자료</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare Expo 연결</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        h1 { 
+            color: #FF6D94; 
+            margin-bottom: 25px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .link {
+            display: block;
+            width: 100%;
+            padding: 15px 0;
+            margin: 15px 0;
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .link:hover {
+            background-color: #ff5c88;
+        }
+        .link.alt {
+            background-color: #4630EB;
+        }
+        .note {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            text-align: left;
+        }
+        .code {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            word-break: break-all;
+            text-align: left;
+            margin: 15px 0;
+        }
+        .error {
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            text-align: left;
+            border-left: 4px solid #f44336;
+        }
+        .success {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            text-align: left;
+            border-left: 4px solid #4caf50;
+        }
+        #countdown {
+            font-weight: bold;
+            color: #FF6D94;
+        }
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .qr-code {
+            margin: 20px auto;
+            max-width: 200px;
+            height: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .status.online {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status.offline {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>낫투데이(HeartCare) 연결</h1>
+    
+    <div class="card">
+        <h2>연결 상태</h2>
+        <div id="connection-status" class="status offline">
+            서버 연결 확인 중...
+        </div>
+        <div id="timestamp" class="timestamp">
+            마지막 확인: <span id="check-time">-</span>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>앱 접속하기</h2>
+        <p>아래 QR 코드를 스캔하거나 링크를 눌러 앱에 접속하세요:</p>
+        
+        <div class="qr-container">
+            <!-- QR 코드 이미지를 SVG로 바로 삽입 -->
+            <svg class="qr-code" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges">
+                <path fill="#ffffff" d="M0 0h29v29H0z"></path>
+                <path fill="#000000" d="M0 0h7v1H0zM8 0h1v1H8zM10 0h2v1H10zM13 0h1v1H13zM16 0h1v1H16zM18 0h1v1H18zM20 0h1v1H20zM22 0h7v1H22zM0 1h1v1H0zM6 1h1v1H6zM9 1h2v1H9zM13 1h1v1H13zM15 1h1v1H15zM18 1h1v1H18zM22 1h1v1H22zM28 1h1v1H28zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h1v1H8zM10 2h1v1H10zM12 2h1v1H12zM14 2h2v1H14zM17 2h1v1H17zM19 2h1v1H19zM22 2h1v1H22zM24 2h3v1H24zM28 2h1v1H28zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM8 3h1v1H8zM11 3h1v1H11zM14 3h4v1H14zM19 3h2v1H19zM22 3h1v1H22zM24 3h3v1H24zM28 3h1v1H28zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h1v1H8zM10 4h1v1H10zM12 4h2v1H12zM15 4h5v1H15zM22 4h1v1H22zM24 4h3v1H24zM28 4h1v1H28zM0 5h1v1H0zM6 5h1v1H6zM8 5h1v1H8zM10 5h6v1H10zM17 5h1v1H17zM19 5h2v1H19zM22 5h1v1H22zM28 5h1v1H28zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1H10zM12 6h1v1H12zM14 6h1v1H14zM16 6h1v1H16zM18 6h1v1H18zM20 6h1v1H20zM22 6h7v1H22zM10 7h1v1H10zM12 7h1v1H12zM15 7h1v1H15zM19 7h1v1H19zM0 8h7v1H0zM8 8h5v1H8zM15 8h2v1H15zM18 8h1v1H18zM20 8h2v1H20zM24 8h1v1H24zM26 8h1v1H26zM1 9h3v1H1zM5 9h3v1H5zM10 9h2v1H10zM13 9h2v1H13zM18 9h1v1H18zM20 9h1v1H20zM23 9h1v1H23zM27 9h2v1H27zM2 10h2v1H2zM5 10h3v1H5zM9 10h1v1H9zM11 10h1v1H11zM13 10h3v1H13zM18 10h2v1H18zM21 10h1v1H21zM24 10h2v1H24zM27 10h1v1H27zM0 11h3v1H0zM4 11h2v1H4zM8 11h4v1H8zM13 11h1v1H13zM15 11h1v1H15zM17 11h2v1H17zM20 11h3v1H20zM24 11h2v1H24zM27 11h1v1H27zM0 12h4v1H0zM5 12h1v1H5zM7 12h1v1H7zM9 12h3v1H9zM14 12h1v1H14zM17 12h1v1H17zM20 12h1v1H20zM22 12h3v1H22zM27 12h1v1H27zM0 13h4v1H0zM6 13h1v1H6zM8 13h7v1H8zM17 13h1v1H17zM19 13h1v1H19zM21 13h2v1H21zM25 13h2v1H25zM0 14h1v1H0zM2 14h3v1H2zM6 14h1v1H6zM8 14h2v1H8zM11 14h7v1H11zM19 14h1v1H19zM21 14h1v1H21zM23 14h3v1H23zM27 14h2v1H27zM0 15h2v1H0zM3 15h3v1H3zM9 15h1v1H9zM11 15h3v1H11zM15 15h1v1H15zM17 15h2v1H17zM20 15h1v1H20zM23 15h1v1H23zM25 15h4v1H25zM8 16h2v1H8zM12 16h2v1H12zM15 16h6v1H15zM22 16h3v1H22zM26 16h1v1H26zM28 16h1v1H28zM0 17h7v1H0zM9 17h1v1H9zM11 17h4v1H11zM16 17h1v1H16zM18 17h2v1H18zM22 17h2v1H22zM25 17h1v1H25zM28 17h1v1H28zM0 18h1v1H0zM6 18h1v1H6zM8 18h1v1H8zM10 18h2v1H10zM14 18h2v1H14zM18 18h1v1H18zM21 18h1v1H21zM23 18h2v1H23zM26 18h2v1H26zM0 19h1v1H0zM2 19h3v1H2zM6 19h1v1H6zM8 19h1v1H8zM10 19h1v1H10zM12 19h2v1H12zM15 19h2v1H15zM18 19h5v1H18zM24 19h2v1H24zM0 20h1v1H0zM2 20h3v1H2zM6 20h1v1H6zM8 20h1v1H8zM11 20h1v1H11zM13 20h1v1H13zM15 20h3v1H15zM19 20h1v1H19zM21 20h5v1H21zM27 20h2v1H27zM0 21h1v1H0zM2 21h3v1H2zM6 21h1v1H6zM8 21h1v1H8zM10 21h1v1H10zM12 21h1v1H12zM14 21h1v1H14zM17 21h2v1H17zM20 21h2v1H20zM23 21h4v1H23zM28 21h1v1H28zM0 22h1v1H0zM6 22h1v1H6zM8 22h1v1H8zM10 22h1v1H10zM12 22h1v1H12zM14 22h1v1H14zM16 22h3v1H16zM21 22h3v1H21zM25 22h2v1H25zM28 22h1v1H28zM0 23h7v1H0zM10 23h1v1H10zM12 23h2v1H12zM15 23h1v1H15zM17 23h2v1H17zM20 23h1v1H20zM22 23h1v1H22zM24 23h1v1H24zM26 23h2v1H26zM8 24h3v1H8zM12 24h1v1H12zM14 24h2v1H14zM18 24h2v1H18zM21 24h1v1H21zM24 24h2v1H24zM0 25h7v1H0zM8 25h1v1H8zM10 25h3v1H10zM14 25h1v1H14zM17 25h2v1H17zM21 25h3v1H21zM25 25h1v1H25zM0 26h1v1H0zM6 26h1v1H6zM8 26h1v1H8zM11 26h1v1H11zM13 26h1v1H13zM16 26h1v1H16zM18 26h2v1H18zM21 26h1v1H21zM23 26h1v1H23zM25 26h3v1H25zM0 27h1v1H0zM2 27h3v1H2zM6 27h1v1H6zM8 27h1v1H8zM10 27h1v1H10zM12 27h1v1H12zM14 27h2v1H14zM17 27h1v1H17zM19 27h2v1H19zM22 27h1v1H22zM25 27h1v1H25zM0 28h1v1H0zM2 28h3v1H2zM6 28h1v1H6zM9 28h1v1H9zM11 28h1v1H11zM13 28h2v1H13zM16 28h4v1H16zM21 28h1v1H21zM24 28h2v1H24zM27 28h1v1H27z"></path>
+            </svg>
+        </div>
+        
+        <div class="button-group">
+            <a href="exp://exp.host/@hsml/heart-care-expo" class="link">
+                Expo 앱으로 바로 열기
+            </a>
+            
+            <a href="exps://exp.host/@hsml/heart-care-expo" class="link alt">
+                iOS용 보안 링크
+            </a>
+        </div>
+        
+        <div class="code">
+            exp://exp.host/@hsml/heart-care-expo
+        </div>
+        
+        <button onclick="copyToClipboard()" class="link" style="background-color: #607d8b;">URL 복사하기</button>
+    </div>
+    
+    <div class="card">
+        <h2>Replit 서버 정보</h2>
+        <p>서버 URL: <span id="server-url">확인 중...</span></p>
+        <p>웹소켓 URL: <span id="ws-url">확인 중...</span></p>
+        
+        <div class="note">
+            <p><strong>참고:</strong> 모바일 앱에서 서버에 연결하려면 기기가 동일한 네트워크에 있어야 합니다.</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>문제 해결</h2>
+        <div class="error">
+            <p><strong>연결 문제:</strong></p>
+            <ol>
+                <li>Expo Go 앱이 최신 버전인지 확인하세요</li>
+                <li>URL을 직접 복사하여 Expo Go 앱에서 붙여넣기하세요</li>
+                <li>Replit 서버가 실행 중인지 확인하세요</li>
+                <li>네트워크 연결 상태를 확인하세요</li>
+            </ol>
+        </div>
+        
+        <div class="success">
+            <p><strong>연결 성공 시:</strong></p>
+            <ol>
+                <li>앱에서 하트 아이콘을 눌러 건강 데이터를 확인할 수 있습니다</li>
+                <li>응급 상황 시 '응급처치' 탭으로 이동하세요</li>
+                <li>보호자 연락이 필요하면 '비상연락' 탭을 사용하세요</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // URL 복사 기능
+        function copyToClipboard() {
+            const url = "exp://exp.host/@hsml/heart-care-expo";
+            
+            navigator.clipboard.writeText(url).then(function() {
+                alert('URL이 클립보드에 복사되었습니다!');
+            }, function(err) {
+                alert('클립보드 복사 중 오류가 발생했습니다: ' + err);
+            });
+        }
+        
+        // 서버 상태 확인
+        function checkServerStatus() {
+            fetch('/api/users/1')
+                .then(response => {
+                    document.getElementById('connection-status').className = 'status online';
+                    document.getElementById('connection-status').innerText = '서버 연결됨';
+                    
+                    // 현재 URL 표시
+                    const url = window.location.origin;
+                    document.getElementById('server-url').innerText = url;
+                    document.getElementById('ws-url').innerText = url.replace('http', 'ws') + '/ws';
+                    
+                    // 타임스탬프 업데이트
+                    const now = new Date();
+                    document.getElementById('check-time').innerText = now.toLocaleTimeString();
+                })
+                .catch(error => {
+                    document.getElementById('connection-status').className = 'status offline';
+                    document.getElementById('connection-status').innerText = '서버 연결 실패';
+                    
+                    // 타임스탬프 업데이트
+                    const now = new Date();
+                    document.getElementById('check-time').innerText = now.toLocaleTimeString();
+                });
+        }
+        
+        // 페이지 로드 시 실행
+        window.onload = function() {
+            // 서버 상태 확인
+            checkServerStatus();
+            // 10초마다 서버 상태 확인
+            setInterval(checkServerStatus, 10000);
+            
+            // OS 감지
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isAndroid = /Android/.test(navigator.userAgent);
+            
+            // 자동 연결 시도는 하지 않음 (사용자가 직접 버튼 클릭하도록)
+        };
+    </script>
+</body>
+</html>

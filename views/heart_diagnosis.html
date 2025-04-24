@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>심장 진단 - HeartCare</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .header {
+            background-color: #FF6D94;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .back-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .card {
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            color: #FF6D94;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .ecg-chart {
+            width: 100%;
+            height: 200px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .ecg-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #FF6D94;
+            transform: translateY(-50%);
+        }
+        .ecg-line::before {
+            content: "";
+            position: absolute;
+            top: -40px;
+            left: 10%;
+            width: 2px;
+            height: 80px;
+            background-color: #FF6D94;
+        }
+        .ecg-line::after {
+            content: "";
+            position: absolute;
+            top: -15px;
+            left: 40%;
+            width: 2px;
+            height: 30px;
+            background-color: #FF6D94;
+        }
+        .heart-rate-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .heart-rate-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #FF6D94;
+        }
+        .heart-rate-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .health-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .health-item {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .health-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF6D94;
+            margin-bottom: 5px;
+        }
+        .health-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .button {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #ff5483;
+        }
+        .watch-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-radius: 10px;
+            color: #2e7d32;
+        }
+        .watch-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            background-color: #2e7d32;
+            border-radius: 50%;
+            position: relative;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .history-date {
+            font-size: 14px;
+            color: #666;
+        }
+        .history-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+        .navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-item {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            text-decoration: none;
+        }
+        .nav-item.active {
+            color: #FF6D94;
+            font-weight: bold;
+        }
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="fallback.html" class="back-button">←</a>
+            <h1>심장 진단</h1>
+            <div style="width: 20px;"></div>
+        </div>
+
+        <div class="watch-status">
+            <div class="watch-icon"></div>
+            <span>Galaxy Watch 연결됨</span>
+        </div>
+
+        <div class="card">
+            <div class="card-title">실시간 심전도(ECG)</div>
+            <div class="ecg-chart">
+                <div class="ecg-line"></div>
+            </div>
+            <div class="heart-rate-container">
+                <div>
+                    <div class="heart-rate-value">72</div>
+                    <div class="heart-rate-label">BPM</div>
+                </div>
+                <div>
+                    <div style="font-weight: bold; color: #4CAF50;">정상</div>
+                    <div class="heart-rate-label">상태</div>
+                </div>
+            </div>
+            <button class="button">측정 기록 저장</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">건강 상태</div>
+            <div class="health-grid">
+                <div class="health-item">
+                    <div class="health-value">98%</div>
+                    <div class="health-label">산소포화도</div>
+                </div>
+                <div class="health-item">
+                    <div class="health-value">120/80</div>
+                    <div class="health-label">혈압</div>
+                </div>
+                <div class="health-item">
+                    <div class="health-value">36.5°C</div>
+                    <div class="health-label">체온</div>
+                </div>
+                <div class="health-item">
+                    <div class="health-value">저위험</div>
+                    <div class="health-label">위험 평가</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">측정 기록</div>
+            <div class="history-item">
+                <div class="history-date">2025.04.10 오전 09:23</div>
+                <div class="history-value">75 BPM</div>
+            </div>
+            <div class="history-item">
+                <div class="history-date">2025.04.09 오후 06:45</div>
+                <div class="history-value">82 BPM</div>
+            </div>
+            <div class="history-item">
+                <div class="history-date">2025.04.08 오전 10:12</div>
+                <div class="history-value">68 BPM</div>
+            </div>
+            <button class="button">모든 기록 보기</button>
+        </div>
+
+        <div style="height: 80px;"></div>
+    </div>
+
+    <div class="navigation">
+        <a href="heart_diagnosis.html" class="nav-item active">
+            <div class="nav-icon">❤️</div>
+            <div>심장진단</div>
+        </a>
+        <a href="emergency_guide.html" class="nav-item">
+            <div class="nav-icon">🚑</div>
+            <div>응급처치</div>
+        </a>
+        <a href="emergency_contacts.html" class="nav-item">
+            <div class="nav-icon">📞</div>
+            <div>비상연락</div>
+        </a>
+        <a href="ai_consultation.html" class="nav-item">
+            <div class="nav-icon">🤖</div>
+            <div>AI 상담</div>
+        </a>
+    </div>
+
+    <script>
+        // 간단한 ECG 애니메이션
+        document.addEventListener('DOMContentLoaded', function() {
+            const ecgLine = document.querySelector('.ecg-line');
+            let position = 0;
+            
+            function animateECG() {
+                position = (position + 1) % 100;
+                const randomHeight = Math.random() * 30 + 10;
+                const beforeHeight = Math.random() * 60 + 20;
+                
+                ecgLine.style.transform = `translateY(${-randomHeight}px)`;
+                setTimeout(() => {
+                    ecgLine.style.transform = 'translateY(0)';
+                }, 100);
+                
+                setTimeout(animateECG, 1000);
+            }
+            
+            animateECG();
+        });
+    </script>
+</body>
+</html>

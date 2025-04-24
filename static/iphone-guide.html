@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이폰에서 HeartCare 사용하기</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #FF6D94;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .instruction-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .instruction-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #FF6D94;
+        }
+        
+        .instruction-image {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 8px;
+            margin: 15px auto;
+            display: block;
+            border: 1px solid #eee;
+        }
+        
+        .instruction-step {
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            background-color: #FF6D94;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .note {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .note-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .button {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            margin: 10px auto;
+            display: block;
+            width: fit-content;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>아이폰에서 HeartCare 사용하기</h1>
+        <p class="subtitle">Apple Watch 연동 가이드</p>
+        
+        <div class="instruction-card">
+            <div class="instruction-title">1. Expo Go 앱 설치하기</div>
+            <div class="instruction-step">
+                <span class="step-number">1</span>
+                아이폰에서 App Store를 엽니다.
+            </div>
+            <div class="instruction-step">
+                <span class="step-number">2</span>
+                검색창에 "Expo Go"를 입력하여 검색합니다.
+            </div>
+            <div class="instruction-step">
+                <span class="step-number">3</span>
+                Expo Go 앱을 설치합니다.
+            </div>
+            <img src="https://www.automationfuel.com/wp-content/uploads/2023/04/expo-1024x1024.png" alt="Expo Go 앱 아이콘" class="instruction-image">
+        </div>
+        
+        <div class="instruction-card">
+            <div class="instruction-title">2. Apple Watch 준비하기</div>
+            <div class="instruction-step">
+                <span class="step-number">1</span>
+                Apple Watch가 아이폰과 페어링되어 있는지 확인합니다.
+            </div>
+            <div class="instruction-step">
+                <span class="step-number">2</span>
+                Watch 앱에서 건강 데이터 공유 권한이 활성화되어 있는지 확인합니다.
+            </div>
+            <div class="instruction-step">
+                <span class="step-number">3</span>
+                필요한 경우 건강 앱에서 심박수, ECG, 혈압 등의 데이터 공유를 허용합니다.
+            </div>
+        </div>
+        
+        <div class="instruction-card">
+            <div class="instruction-title">3. HeartCare 앱에 접속하기</div>
+            <div class="instruction-step">
+                <span class="step-number">1</span>
+                Expo Go 앱을 엽니다.
+            </div>
+            <div class="instruction-step">
+                <span class="step-number">2</span>
+                QR 코드 스캔 버튼을 누릅니다.
+            </div>
+            <div class="instruction-step">
+                <span class="step-number">3</span>
+                웹사이트에 표시된 HeartCare QR 코드를 스캔합니다.
+            </div>
+            <div class="instruction-step">
+                <span class="step-number">4</span>
+                블루투스 및 건강 데이터 접근 권한을 허용합니다.
+            </div>
+        </div>
+        
+        <div class="note">
+            <span class="note-title">💡 참고 사항</span>
+            <p>Expo Go를 통해 HeartCare 앱을 실행하면 Apple Watch와 연동하여 심박수, ECG 데이터를 실시간으로 모니터링할 수 있습니다. 연결이 원활하지 않을 경우, 아이폰의 블루투스를 껐다가 다시 켜보세요.</p>
+        </div>
+        
+        <div class="note">
+            <span class="note-title">⚠️ 주의 사항</span>
+            <p>이 앱은 의료기기가 아니며, 의학적 진단이나 처방을 대체할 수 없습니다. 심각한 증상이 있는 경우 즉시 의료 전문가에게 상담하세요.</p>
+        </div>
+        
+        <a href="/expo-qr.html" class="button">Expo Go QR 코드 보기</a>
+        <a href="/" class="button" style="background-color: #f0f0f0; color: #333;">뒤로 가기</a>
+    </div>
+</body>
+</html>

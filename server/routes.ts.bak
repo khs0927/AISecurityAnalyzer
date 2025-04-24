@@ -1,0 +1,1672 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
+import { storage } from "./storage";
+import { 
+  insertUserSchema, 
+  insertHealthDataSchema, 
+  insertEcgRecordingSchema,
+  insertGuardianRelationshipSchema, 
+  insertAlertSchema,
+  insertAiConsultationSchema,
+  insertEmergencyContactSchema,
+  insertMedicationSchema,
+  insertDailyReportSchema,
+  insertAiAnalysisSchema,
+  insertEmergencyEventSchema
+} from "@shared/schema";
+import { ZodError } from "zod";
+import { generateHealthConsultationResponse, analyzeECGData, analyzeHealthRisk } from "./aiModels";
+
+// Websocket clients mapping
+type Client = {
+  ws: WebSocket;
+  userId?: number;
+};
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  const httpServer = createServer(app);
+  
+  // Setup WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const clients: Client[] = [];
+
+  // 스마트워치 연결 API 엔드포인트 추가
+  app.get('/api/users/:userId/smartwatch-connections', async (req, res) => {
+    // 데모를 위한 스마트워치 연결 정보 반환
+    res.json([
+      {
+        id: '1',
+        type: 'apple',
+        name: 'Apple Watch',
+        model: 'Series 7',
+        batteryLevel: 78,
+        firmwareVersion: '8.5.1',
+        lastSynced: new Date().toISOString(),
+        connected: true,
+        updateAvailable: true
+      }
+    ]);
+  });
+
+  wss.on('connection', (ws) => {
+    const client: Client = { ws };
+    clients.push(client);
+
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Handle authentication
+        if (data.type === 'auth') {
+          client.userId = parseInt(data.userId);
+        }
+        
+        // Handle ECG data streaming
+        if (data.type === 'ecgData' && client.userId) {
+          // Broadcast to guardians watching this user
+          const relationships = await storage.getGuardianRelationshipsByUserId(client.userId);
+          const guardianIds = relationships.map(rel => rel.guardianId);
+          
+          // Find guardian clients
+          clients.forEach(guardianClient => {
+            if (guardianClient.userId && guardianIds.includes(guardianClient.userId) && 
+                guardianClient.ws.readyState === WebSocket.OPEN) {
+              guardianClient.ws.send(JSON.stringify({
+                type: 'ecgUpdate',
+                userId: client.userId,
+                data: data.data
+              }));
+            }
+          });
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+
+    ws.on('close', () => {
+      const index = clients.findIndex(c => c.ws === ws);
+      if (index !== -1) {
+        clients.splice(index, 1);
+      }
+    });
+  });
+
+  // Broadcast to specific user
+  const broadcastToUser = (userId: number, data: any) => {
+    clients.forEach(client => {
+      if (client.userId === userId && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(data));
+      }
+    });
+  };
+
+  // Broadcast to guardians of a user
+  const broadcastToGuardians = async (userId: number, data: any) => {
+    const relationships = await storage.getGuardianRelationshipsByUserId(userId);
+    const guardianIds = relationships.map(rel => rel.guardianId);
+    
+    clients.forEach(client => {
+      if (client.userId && guardianIds.includes(client.userId) && 
+          client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(data));
+      }
+    });
+  };
+
+  // User routes
+  app.post('/api/users', async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      res.status(201).json(user);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid user data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create user' });
+      }
+    }
+  });
+
+  app.get('/api/users/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const user = await storage.getUser(id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json(user);
+  });
+
+  app.put('/api/users/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userData = req.body;
+      const user = await storage.updateUser(id, userData);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update user' });
+    }
+  });
+
+  // Health data routes
+  app.post('/api/health-data', async (req, res) => {
+    try {
+      const healthData = insertHealthDataSchema.parse(req.body);
+      const data = await storage.createHealthData(healthData);
+      
+      // Check if the risk level is high and create an alert if needed
+      if (data.riskLevel && data.riskLevel > 50) {
+        const alert = await storage.createAlert({
+          userId: data.userId,
+          alertType: data.riskLevel > 70 ? 'risk' : 'warning',
+          message: data.riskLevel > 70 
+            ? '높은 위험: 심장 건강 경고 발생' 
+            : '주의 필요: 심장 건강 위험 상승',
+          healthDataId: data.id
+        });
+        
+        // Notify user and guardians about the alert
+        const alertData = {
+          type: 'alert',
+          alert
+        };
+        
+        broadcastToUser(data.userId, alertData);
+        await broadcastToGuardians(data.userId, alertData);
+      }
+      
+      res.status(201).json(data);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid health data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create health data' });
+      }
+    }
+  });
+
+  app.get('/api/users/:userId/health-data', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const data = await storage.getHealthDataByUserId(userId);
+    res.json(data);
+  });
+
+  app.get('/api/users/:userId/health-data/latest', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const data = await storage.getLatestHealthData(userId);
+    
+    if (!data) {
+      return res.status(404).json({ message: 'No health data found for this user' });
+    }
+    
+    res.json(data);
+  });
+
+  // ECG recording routes
+  app.post('/api/ecg-recordings', async (req, res) => {
+    try {
+      const recording = insertEcgRecordingSchema.parse(req.body);
+      const savedRecording = await storage.createEcgRecording(recording);
+      
+      // Check for abnormalities and create alerts if needed
+      if (savedRecording.abnormalities && savedRecording.abnormalities.length > 0) {
+        const alert = await storage.createAlert({
+          userId: savedRecording.userId,
+          alertType: 'risk',
+          message: `ECG 이상 감지: ${savedRecording.abnormalities.join(', ')}`,
+          ecgRecordingId: savedRecording.id
+        });
+        
+        // Notify user and guardians
+        const alertData = {
+          type: 'alert',
+          alert
+        };
+        
+        broadcastToUser(savedRecording.userId, alertData);
+        await broadcastToGuardians(savedRecording.userId, alertData);
+      }
+      
+      res.status(201).json(savedRecording);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid ECG recording data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to save ECG recording' });
+      }
+    }
+  });
+
+  app.get('/api/users/:userId/ecg-recordings', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const recordings = await storage.getEcgRecordingsByUserId(userId);
+    res.json(recordings);
+  });
+
+  // Guardian relationship routes
+  app.post('/api/guardian-relationships', async (req, res) => {
+    try {
+      const relationship = insertGuardianRelationshipSchema.parse(req.body);
+      const savedRelationship = await storage.createGuardianRelationship(relationship);
+      res.status(201).json(savedRelationship);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid relationship data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create guardian relationship' });
+      }
+    }
+  });
+
+  app.get('/api/guardians/:guardianId/monitored-users', async (req, res) => {
+    const guardianId = parseInt(req.params.guardianId);
+    const users = await storage.getUsersMonitoredByGuardian(guardianId);
+    
+    // Fetch latest health data for each user
+    const usersWithData = await Promise.all(
+      users.map(async (user) => {
+        const healthData = await storage.getLatestHealthData(user.id);
+        return { 
+          ...user, 
+          healthData 
+        };
+      })
+    );
+    
+    res.json(usersWithData);
+  });
+
+  // Alert routes
+  app.get('/api/users/:userId/alerts', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const alerts = await storage.getAlertsByUserId(userId);
+    res.json(alerts);
+  });
+
+  app.post('/api/alerts/:id/read', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const alert = await storage.markAlertAsRead(id);
+    
+    if (!alert) {
+      return res.status(404).json({ message: 'Alert not found' });
+    }
+    
+    res.json(alert);
+  });
+
+  // AI consultation routes
+  // AI-powered consultation endpoints
+  app.post('/api/ai-chat', async (req, res) => {
+    try {
+      const { userId, message, context = "" } = req.body;
+      
+      if (!userId || !message) {
+        return res.status(400).json({ message: 'userId and message are required' });
+      }
+      
+      // Generate AI response using OpenAI
+      const aiResponse = await generateHealthConsultationResponse(message, context);
+      
+      // Save the consultation record with proper JSON formatting
+      const messagesJSON = JSON.stringify([
+        { sender: 'user', content: message, timestamp: new Date().toISOString() },
+        { sender: 'ai', content: aiResponse, timestamp: new Date().toISOString() }
+      ]);
+
+      const consultation = await storage.createAiConsultation({
+        userId,
+        messages: messagesJSON as any,
+        category: 'general'
+      });
+      
+      res.json({ consultation, aiResponse });
+    } catch (error) {
+      console.error('AI Chat Error:', error);
+      res.status(500).json({ 
+        message: 'AI consultation failed', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+  
+  app.post('/api/ai-analyze/ecg', async (req, res) => {
+    try {
+      const { userId, ecgData, userInfo } = req.body;
+      
+      if (!userId || !ecgData || !Array.isArray(ecgData)) {
+        return res.status(400).json({ message: 'userId and valid ecgData array are required' });
+      }
+      
+      // Get user information if not provided
+      const user = userInfo || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Analyze ECG data using OpenAI
+      const analysis = await analyzeECGData(ecgData, user);
+      
+      // Store the ECG recording with analysis
+      const recording = await storage.createEcgRecording({
+        userId,
+        data: ecgData,
+        duration: ecgData.length / 250, // Assuming 250Hz sampling rate
+        abnormalities: analysis.detectedIssues,
+        analysis: {
+          summary: analysis.summary,
+          riskLevel: analysis.riskLevel,
+          recommendations: analysis.recommendations
+        }
+      });
+      
+      // Create an alert if risk level is high or critical
+      if (analysis.riskLevel === 'high' || analysis.riskLevel === 'critical') {
+        const alert = await storage.createAlert({
+          userId,
+          alertType: 'risk',
+          message: `ECG 분석 위험 감지: ${analysis.detectedIssues.join(', ')}`,
+          ecgRecordingId: recording.id
+        });
+        
+        // Notify user and guardians
+        const alertData = {
+          type: 'alert',
+          alert
+        };
+        
+        broadcastToUser(userId, alertData);
+        await broadcastToGuardians(userId, alertData);
+      }
+      
+      res.json({ recording, analysis });
+    } catch (error) {
+      console.error('ECG Analysis Error:', error);
+      res.status(500).json({ 
+        message: 'ECG analysis failed', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+  
+  app.post('/api/ai-analyze/risk', async (req, res) => {
+    try {
+      const { userId, healthData } = req.body;
+      
+      if (!userId || !healthData) {
+        return res.status(400).json({ message: 'userId and healthData are required' });
+      }
+      
+      // Get user information if not in healthData
+      if (!healthData.age || !healthData.gender) {
+        const user = await storage.getUser(userId);
+        if (user) {
+          healthData.age = user.age;
+          healthData.gender = user.gender;
+          healthData.riskFactors = healthData.riskFactors || [];
+          
+          // Add medical conditions as risk factors if available
+          if (user.medicalConditions && user.medicalConditions.length > 0) {
+            healthData.medicalConditions = user.medicalConditions;
+          }
+        }
+      }
+      
+      // Analyze health risk using OpenAI
+      const riskAnalysis = await analyzeHealthRisk(healthData);
+      
+      // Store health data with risk score
+      const storedHealthData = await storage.createHealthData({
+        userId,
+        heartRate: healthData.heartRate,
+        oxygenLevel: healthData.oxygenLevel,
+        temperature: healthData.temperature,
+        bloodPressureSystolic: healthData.bloodPressureSystolic,
+        bloodPressureDiastolic: healthData.bloodPressureDiastolic,
+        riskLevel: riskAnalysis.overallRiskScore
+      });
+      
+      // Create an alert if risk score is high
+      if (riskAnalysis.overallRiskScore > 70) {
+        const alert = await storage.createAlert({
+          userId,
+          alertType: 'risk',
+          message: `높은 위험 점수: ${riskAnalysis.overallRiskScore}%, 즉시 주의가 필요합니다`,
+          healthDataId: storedHealthData.id
+        });
+        
+        // Notify user and guardians
+        const alertData = {
+          type: 'alert',
+          alert
+        };
+        
+        broadcastToUser(userId, alertData);
+        await broadcastToGuardians(userId, alertData);
+      }
+      
+      res.json({ healthData: storedHealthData, riskAnalysis });
+    } catch (error) {
+      console.error('Risk Analysis Error:', error);
+      res.status(500).json({ 
+        message: 'Health risk analysis failed', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.post('/api/ai-consultations', async (req, res) => {
+    try {
+      const consultation = insertAiConsultationSchema.parse(req.body);
+      const savedConsultation = await storage.createAiConsultation(consultation);
+      res.status(201).json(savedConsultation);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid consultation data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create AI consultation' });
+      }
+    }
+  });
+
+  app.put('/api/ai-consultations/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const consultationData = req.body;
+      const consultation = await storage.updateAiConsultation(id, consultationData);
+      
+      if (!consultation) {
+        return res.status(404).json({ message: 'Consultation not found' });
+      }
+      
+      res.json(consultation);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update consultation' });
+    }
+  });
+
+  app.get('/api/users/:userId/ai-consultations', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const consultations = await storage.getAiConsultationsByUserId(userId);
+    res.json(consultations);
+  });
+
+  // Simulation endpoints for demo purposes
+  app.post('/api/simulate/risk-level', async (req, res) => {
+    try {
+      const { userId, riskLevel } = req.body;
+      
+      if (!userId || riskLevel === undefined) {
+        return res.status(400).json({ message: 'userId and riskLevel are required' });
+      }
+      
+      // Create health data with the simulated risk level
+      const healthData = await storage.createHealthData({
+        userId,
+        heartRate: Math.floor(70 + riskLevel / 2),
+        oxygenLevel: Math.max(90, 100 - riskLevel / 10),
+        temperature: 36.5 + (riskLevel > 50 ? 0.8 : 0),
+        bloodPressureSystolic: Math.floor(120 + riskLevel),
+        bloodPressureDiastolic: Math.floor(80 + riskLevel / 2),
+        riskLevel
+      });
+      
+      // Notify clients
+      const data = {
+        type: 'healthUpdate',
+        healthData
+      };
+      
+      broadcastToUser(userId, data);
+      await broadcastToGuardians(userId, data);
+      
+      res.json(healthData);
+    } catch (error) {
+      res.status(500).json({ message: 'Simulation failed' });
+    }
+  });
+
+  app.post('/api/simulate/ecg-anomaly', async (req, res) => {
+    try {
+      const { userId, anomalyType } = req.body;
+      
+      if (!userId || !anomalyType) {
+        return res.status(400).json({ message: 'userId and anomalyType are required' });
+      }
+      
+      // Create an ECG recording with the simulated anomaly
+      const recording = await storage.createEcgRecording({
+        userId,
+        data: [], // In a real app, this would contain ECG data points
+        duration: 30,
+        abnormalities: [anomalyType],
+        analysis: {
+          severity: 'high',
+          confidence: 0.92,
+          recommendation: '즉시 의료 조치가 필요합니다.'
+        }
+      });
+      
+      // Create an alert for this anomaly
+      const alert = await storage.createAlert({
+        userId,
+        alertType: 'risk',
+        message: `ECG 이상 감지: ${anomalyType}`,
+        ecgRecordingId: recording.id
+      });
+      
+      // Notify clients
+      const alertData = {
+        type: 'alert',
+        alert
+      };
+      
+      broadcastToUser(userId, alertData);
+      await broadcastToGuardians(userId, alertData);
+      
+      res.json({ recording, alert });
+    } catch (error) {
+      res.status(500).json({ message: 'Simulation failed' });
+    }
+  });
+
+  // Emergency Contact routes
+  app.get('/api/users/:userId/emergency-contacts', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const contacts = await storage.getEmergencyContactsByUserId(userId);
+    res.json(contacts);
+  });
+
+  app.post('/api/emergency-contacts', async (req, res) => {
+    try {
+      const contactData = insertEmergencyContactSchema.parse(req.body);
+      
+      // If this contact is set as default, unset any existing default contacts
+      if (contactData.isDefault) {
+        const existingContacts = await storage.getEmergencyContactsByUserId(contactData.userId);
+        for (const contact of existingContacts) {
+          if (contact.isDefault) {
+            await storage.updateEmergencyContact(contact.id, { isDefault: false });
+          }
+        }
+      }
+      
+      const contact = await storage.createEmergencyContact(contactData);
+      res.status(201).json(contact);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid emergency contact data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create emergency contact' });
+      }
+    }
+  });
+
+  app.put('/api/emergency-contacts/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const contactData = req.body;
+      
+      // If updating to make this contact default
+      if (contactData.isDefault) {
+        const contact = await storage.getEmergencyContact(id);
+        if (contact) {
+          const existingContacts = await storage.getEmergencyContactsByUserId(contact.userId);
+          for (const c of existingContacts) {
+            if (c.id !== id && c.isDefault) {
+              await storage.updateEmergencyContact(c.id, { isDefault: false });
+            }
+          }
+        }
+      }
+      
+      const updatedContact = await storage.updateEmergencyContact(id, contactData);
+      
+      if (!updatedContact) {
+        return res.status(404).json({ message: 'Emergency contact not found' });
+      }
+      
+      res.json(updatedContact);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update emergency contact' });
+    }
+  });
+
+  app.delete('/api/emergency-contacts/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const success = await storage.deleteEmergencyContact(id);
+    
+    if (!success) {
+      return res.status(404).json({ message: 'Emergency contact not found' });
+    }
+    
+    res.status(204).end();
+  });
+  
+  // Medication Management routes
+  app.get('/api/users/:userId/medications', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const medications = await storage.getMedicationsByUserId(userId);
+    res.json(medications);
+  });
+
+  app.post('/api/medications', async (req, res) => {
+    try {
+      const medicationData = insertMedicationSchema.parse(req.body);
+      const medication = await storage.createMedication(medicationData);
+      res.status(201).json(medication);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid medication data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create medication' });
+      }
+    }
+  });
+
+  app.put('/api/medications/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const medicationData = req.body;
+      const medication = await storage.updateMedication(id, medicationData);
+      
+      if (!medication) {
+        return res.status(404).json({ message: 'Medication not found' });
+      }
+      
+      res.json(medication);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update medication' });
+    }
+  });
+
+  app.delete('/api/medications/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const success = await storage.deleteMedication(id);
+    
+    if (!success) {
+      return res.status(404).json({ message: 'Medication not found' });
+    }
+    
+    res.status(204).end();
+  });
+
+  // Daily Health Report routes
+  app.get('/api/users/:userId/daily-reports', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const reports = await storage.getDailyReportsByUserId(userId, limit);
+    res.json(reports);
+  });
+
+  app.get('/api/users/:userId/daily-reports/date/:date', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const date = new Date(req.params.date);
+    
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+    
+    const report = await storage.getDailyReportByDate(userId, date);
+    
+    if (!report) {
+      // 해당 날짜에 보고서가 없으면 기본 예시 데이터를 반환합니다
+      const defaultReport = {
+        id: 0,
+        userId,
+        date,
+        averageHeartRate: 72,
+        minHeartRate: 58,
+        maxHeartRate: 110,
+        averageOxygenLevel: 98,
+        averageBloodPressureSystolic: 118,
+        averageBloodPressureDiastolic: 75,
+        steps: 6500,
+        activeMinutes: 35,
+        caloriesBurned: 1850,
+        sleepDuration: 420,
+        sleepQuality: "양호",
+        dietaryIntake: {
+          calories: 1950,
+          carbs: 220,
+          protein: 85,
+          fat: 60,
+          water: 1800
+        },
+        riskAssessment: 28,
+        stressLevel: 3,
+        ecgRecordingId: null,
+        nutritionRecommendations: {
+          suggestions: [
+            "나트륨 섭취를 줄이세요",
+            "더 많은 물을 마시세요",
+            "식이 섬유가 풍부한 음식을 섭취하세요"
+          ]
+        },
+        activityRecommendations: {
+          suggestions: [
+            "하루에 30분씩 빠른 걸음으로 걷기",
+            "무릎에 부담이 적은 운동 추천",
+            "일주일에 2~3회 근력 운동 추천"
+          ]
+        },
+        createdAt: new Date()
+      };
+      
+      // 기본 보고서를 storage에 생성하지 않고 직접 응답으로 반환합니다
+      return res.json(defaultReport);
+    }
+    
+    res.json(report);
+  });
+
+  app.post('/api/daily-reports', async (req, res) => {
+    try {
+      const reportData = insertDailyReportSchema.parse(req.body);
+      
+      // Check if a report already exists for this date
+      const existingReport = await storage.getDailyReportByDate(reportData.userId, reportData.date);
+      
+      if (existingReport) {
+        return res.status(409).json({ 
+          message: 'A report already exists for this date', 
+          existingReport 
+        });
+      }
+      
+      const report = await storage.createDailyReport(reportData);
+      res.status(201).json(report);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid daily report data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create daily report' });
+      }
+    }
+  });
+
+  // Emergency Event routes
+  app.get('/api/users/:userId/emergency-events', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const status = req.query.status as string | undefined;
+    const events = await storage.getEmergencyEventsByUserId(userId, status);
+    res.json(events);
+  });
+
+  app.post('/api/emergency-events', async (req, res) => {
+    try {
+      const eventData = insertEmergencyEventSchema.parse(req.body);
+      const event = await storage.createEmergencyEvent(eventData);
+      
+      // Notify the user and guardians about the emergency
+      const eventNotification = {
+        type: 'emergencyEvent',
+        event
+      };
+      
+      broadcastToUser(eventData.userId, eventNotification);
+      await broadcastToGuardians(eventData.userId, eventNotification);
+      
+      // If the event is critical, also notify emergency contacts
+      if (eventData.severity === 'critical') {
+        const emergencyContacts = await storage.getEmergencyContactsByUserId(eventData.userId);
+        
+        // In a real app, this would trigger actual calls/SMS to emergency contacts
+        // For now, we'll just create alert records
+        for (const contact of emergencyContacts) {
+          await storage.createAlert({
+            userId: eventData.userId,
+            alertType: 'risk',
+            message: `비상 상황: ${contact.name}님에게 자동 연락 시도됨`,
+          });
+          
+          // Set lastContactedAt field to now
+          await storage.updateEmergencyContact(contact.id, {
+            lastContactedAt: new Date() as any // Type casting as any to avoid type errors
+          });
+        }
+      }
+      
+      res.status(201).json(event);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Invalid emergency event data', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Failed to create emergency event' });
+      }
+    }
+  });
+
+  app.put('/api/emergency-events/:id/status', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, notes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: 'Status is required' });
+      }
+      
+      const event = await storage.updateEmergencyEventStatus(id, status, notes);
+      
+      if (!event) {
+        return res.status(404).json({ message: 'Emergency event not found' });
+      }
+      
+      // Notify the user and guardians about the status change
+      const eventUpdate = {
+        type: 'emergencyUpdate',
+        event
+      };
+      
+      broadcastToUser(event.userId, eventUpdate);
+      await broadcastToGuardians(event.userId, eventUpdate);
+      
+      res.json(event);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update emergency event status' });
+    }
+  });
+
+  // Multimodal AI Analysis routes
+  app.post('/api/ai/multimodal-analysis', async (req, res) => {
+    try {
+      const { userId, analysisType, data } = req.body;
+      
+      if (!userId || !analysisType || !data) {
+        return res.status(400).json({ message: 'userId, analysisType, and data are required' });
+      }
+      
+      // Define which models to use based on analysis type
+      let models: string[] = ['gpt-4o'];  // Default model
+      
+      // For comprehensive analysis, use multiple models
+      if (analysisType === 'comprehensive') {
+        // Check if Anthropic API key is available
+        // Here we could use Claude models as well if available
+        models = ['gpt-4o', 'deepseek-medical'];
+      } else if (analysisType === 'ecg') {
+        models = ['deepseek-medical', 'gpt-4o'];
+      }
+      
+      // Prepare input data for analysis
+      const input = {
+        userId,
+        timestamp: new Date(),
+        data,
+        userInfo: await storage.getUser(userId),
+        recentHealthData: await storage.getLatestHealthData(userId)
+      };
+      
+      let results: any;
+      let confidence = 0;
+      const startTime = Date.now();
+      
+      // Perform analysis based on type - in a real app this would call specific model APIs
+      switch (analysisType) {
+        case 'ecg':
+          results = await analyzeECGData(data.ecgData, input.userInfo);
+          // Adding recommendations field if it doesn't already exist
+          if (!results.recommendations) {
+            results.recommendations = [
+              "ECG 결과를 의사와 상담하세요.",
+              "정기적인 심장 검진을 유지하세요.",
+              "필요한 경우 추가 검사를 받으세요."
+            ];
+          }
+          confidence = 0.92;
+          break;
+        case 'vital_signs':
+          results = await analyzeHealthRisk({
+            ...data.vitalSigns,
+            age: input.userInfo?.age,
+            gender: input.userInfo?.gender,
+            medicalConditions: input.userInfo?.medicalConditions
+          });
+          // Adding recommendations based on suggestions
+          results.recommendations = results.suggestions || [
+            "충분한 수분 섭취를 유지하세요.",
+            "규칙적인 운동을 하세요.",
+            "스트레스 관리에 신경 쓰세요."
+          ];
+          confidence = 0.88;
+          break;
+        case 'medication':
+          // In a real app, this would call a specialized medication analysis API
+          results = {
+            interactions: [],
+            warnings: [],
+            recommendations: ["현재 복용 중인 약물에 특이사항은 없습니다."]
+          };
+          confidence = 0.85;
+          break;
+        case 'comprehensive':
+          // Comprehensive analysis combines multiple analyses
+          const ecgResults = data.ecgData ? 
+            await analyzeECGData(data.ecgData, input.userInfo) : null;
+          
+          const vitalResults = data.vitalSigns ? 
+            await analyzeHealthRisk({
+              ...data.vitalSigns,
+              age: input.userInfo?.age,
+              gender: input.userInfo?.gender,
+              medicalConditions: input.userInfo?.medicalConditions
+            }) : null;
+          
+          // Ensure ecgResults has recommendations
+          if (ecgResults && !ecgResults.recommendations) {
+            ecgResults.recommendations = [
+              "ECG 결과를 의사와 상담하세요.",
+              "정기적인 심장 검진을 유지하세요."
+            ];
+          }
+          
+          // Define suggestions or recommendations for results
+          let vitalSuggestions = vitalResults?.suggestions || [];
+          
+          // Ensure we're not directly modifying the result structure
+          const vitalResultsWithRecommendations = vitalResults ? {
+            ...vitalResults,
+            recommendations: vitalSuggestions
+          } : null;
+          
+          results = {
+            ecgAnalysis: ecgResults,
+            vitalSignsAnalysis: vitalResultsWithRecommendations,
+            combinedRiskLevel: Math.max(
+              ecgResults?.riskLevel === 'high' ? 80 : 
+                ecgResults?.riskLevel === 'moderate' ? 50 : 30,
+              vitalResults?.overallRiskScore || 0
+            ),
+            recommendations: [
+              ...(ecgResults?.recommendations || []),
+              ...vitalSuggestions
+            ]
+          };
+          confidence = 0.94;
+          break;
+        default:
+          return res.status(400).json({ message: 'Invalid analysis type' });
+      }
+      
+      const processingTime = Date.now() - startTime;
+      
+      // Save the analysis to the database
+      const analysis = await storage.createAiAnalysis({
+        userId,
+        analysisType,
+        input: input as any,
+        result: results as any,
+        confidence,
+        models,
+        processingTime
+      });
+      
+      // If the analysis indicates a risk, create an alert
+      if ((analysisType === 'comprehensive' && results.combinedRiskLevel > 70) ||
+          (analysisType === 'ecg' && (results.riskLevel === 'high' || results.riskLevel === 'critical')) ||
+          (analysisType === 'vital_signs' && results.overallRiskScore > 70)) {
+        
+        const alert = await storage.createAlert({
+          userId,
+          alertType: 'risk',
+          message: `AI 분석 위험 감지: ${analysisType} 분석에서 위험 상황이 감지되었습니다.`,
+        });
+        
+        // Notify the user and guardians
+        const alertData = {
+          type: 'alert',
+          alert
+        };
+        
+        broadcastToUser(userId, alertData);
+        await broadcastToGuardians(userId, alertData);
+      }
+      
+      res.json({ analysis, results });
+    } catch (error) {
+      console.error('Multimodal AI Analysis Error:', error);
+      res.status(500).json({ 
+        message: 'Multimodal AI analysis failed', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.get('/api/users/:userId/ai-analyses', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const analysisType = req.query.type as string | undefined;
+    const analyses = await storage.getAiAnalysesByUserId(userId, analysisType);
+    res.json(analyses);
+  });
+
+  app.get('/api/ai-analyses/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const analysis = await storage.getAiAnalysis(id);
+    
+    if (!analysis) {
+      return res.status(404).json({ message: 'AI analysis not found' });
+    }
+    
+    res.json(analysis);
+  });
+  
+  // Phone Call Simulation API (for emergency situations)
+  app.post('/api/simulate/emergency-call', async (req, res) => {
+    try {
+      const { userId, contactId, callType } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'userId is required' });
+      }
+      
+      // If contactId is provided, simulate calling that specific contact
+      // Otherwise, simulate calling emergency services (119)
+      let contact;
+      let callTarget;
+      
+      if (contactId) {
+        contact = await storage.getEmergencyContact(parseInt(contactId));
+        if (!contact) {
+          return res.status(404).json({ message: 'Emergency contact not found' });
+        }
+        callTarget = `${contact.name} (${contact.phoneNumber})`;
+      } else {
+        callTarget = callType === 'emergency' ? '119 응급 서비스' : '의료 상담 서비스';
+      }
+      
+      // Create an emergency event for this call
+      const event = await storage.createEmergencyEvent({
+        userId,
+        triggeredBy: 'user',
+        severity: callType === 'emergency' ? 'critical' : 'high',
+        status: 'active', // status is required
+        notes: `${callTarget}에 전화 연결 시도`
+      });
+      
+      // Create an alert for the call
+      const alert = await storage.createAlert({
+        userId,
+        alertType: 'info',
+        message: `${callTarget}에 전화 연결됨`,
+      });
+      
+      // Notify the user and guardians
+      const eventNotification = {
+        type: 'emergencyCall',
+        event,
+        callTarget
+      };
+      
+      broadcastToUser(userId, eventNotification);
+      await broadcastToGuardians(userId, eventNotification);
+      
+      // In a real app, this would initiate an actual call using a telephony API
+      // For now, we just simulate a successful call
+      
+      res.json({ 
+        success: true, 
+        message: `${callTarget}에 전화 연결됨`, 
+        callId: Date.now().toString(),
+        event,
+        alert
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to simulate emergency call' });
+    }
+  });
+
+  // Hospital Search API
+  app.get('/api/hospitals/search', async (req, res) => {
+    const { query, location, speciality } = req.query;
+    
+    if (!query && !location) {
+      return res.status(400).json({ message: '검색어 또는 위치 정보가 필요합니다' });
+    }
+    
+    try {
+      // 실제 시스템에서는 외부 API 연동이나 데이터베이스 쿼리가 필요합니다.
+      // 현재는 샘플 데이터를 반환합니다
+      const hospitals = [
+        {
+          id: '1',
+          name: '서울대학교병원',
+          address: '서울특별시 종로구 대학로 101',
+          phoneNumber: '02-2072-2114',
+          specialities: ['내과', '외과', '신경과', '심장내과'],
+          rating: 4.7,
+          location: {
+            latitude: 37.5802,
+            longitude: 126.9998
+          }
+        },
+        {
+          id: '2',
+          name: '세브란스병원',
+          address: '서울특별시 서대문구 연세로 50-1',
+          phoneNumber: '02-2228-0114',
+          specialities: ['내과', '외과', '심장내과', '소아과'],
+          rating: 4.6,
+          location: {
+            latitude: 37.5626,
+            longitude: 126.9409
+          }
+        },
+        {
+          id: '3',
+          name: '아산병원',
+          address: '서울특별시 송파구 올림픽로 43길 88',
+          phoneNumber: '1688-7575',
+          specialities: ['내과', '외과', '심장내과', '정형외과'],
+          rating: 4.8,
+          location: {
+            latitude: 37.5274,
+            longitude: 127.1091
+          }
+        }
+      ];
+      
+      // 검색 필터 적용
+      let filteredHospitals = hospitals;
+      
+      if (query) {
+        const searchTerm = (query as string).toLowerCase();
+        filteredHospitals = filteredHospitals.filter(hospital => 
+          hospital.name.toLowerCase().includes(searchTerm) || 
+          hospital.address.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      if (speciality) {
+        filteredHospitals = filteredHospitals.filter(hospital => 
+          hospital.specialities.some(s => s.toLowerCase().includes((speciality as string).toLowerCase()))
+        );
+      }
+      
+      res.json(filteredHospitals);
+    } catch (error) {
+      console.error('병원 검색 오류:', error);
+      res.status(500).json({ message: '병원 정보를 검색하는 중 오류가 발생했습니다' });
+    }
+  });
+  
+  // Medication Search API
+  app.get('/api/medications/search', async (req, res) => {
+    const { name, shape, color, dosage } = req.query;
+    
+    if (!name && !shape && !color) {
+      return res.status(400).json({ message: '약품명, 모양, 또는 색상 중 하나는 필요합니다' });
+    }
+    
+    try {
+      // 실제 시스템에서는 외부 의약품 데이터베이스 API 연동이 필요합니다.
+      // 현재는 샘플 데이터를 반환합니다
+      const medications = [
+        {
+          id: 'm1',
+          name: '아스피린',
+          genericName: '아세틸살리실산',
+          category: '진통제/해열제',
+          dosage: '100mg',
+          form: '정제',
+          shape: '원형',
+          color: '흰색',
+          manufacturer: '바이엘',
+          description: '혈액 응고를 방지하고 통증과 염증을 줄이는데 사용됩니다.',
+          sideEffects: ['위장 장애', '구역질', '출혈 위험 증가'],
+          interactions: ['항응고제', '이부프로펜', '알코올'],
+          prescriptionRequired: false,
+          image: 'https://example.com/aspirin.jpg'
+        },
+        {
+          id: 'm2',
+          name: '리피토',
+          genericName: '아토르바스타틴',
+          category: '스타틴(콜레스테롤 저하제)',
+          dosage: '20mg',
+          form: '정제',
+          shape: '타원형',
+          color: '흰색',
+          manufacturer: '화이자',
+          description: '콜레스테롤 수치를 낮추는데 사용됩니다.',
+          sideEffects: ['근육통', '간 효소 증가', '소화 불량'],
+          interactions: ['에리스로마이신', '자몽 주스', '피브레이트'],
+          prescriptionRequired: true,
+          image: 'https://example.com/lipitor.jpg'
+        },
+        {
+          id: 'm3',
+          name: '노바스크',
+          genericName: '암로디핀',
+          category: '칼슘 채널 차단제(혈압 약)',
+          dosage: '5mg',
+          form: '정제',
+          shape: '다이아몬드형',
+          color: '노란색',
+          manufacturer: '한국화이자',
+          description: '고혈압과 협심증 치료에 사용됩니다.',
+          sideEffects: ['부종', '두통', '현기증'],
+          interactions: ['심바스타틴', '시메티딘'],
+          prescriptionRequired: true,
+          image: 'https://example.com/norvasc.jpg'
+        },
+        {
+          id: 'm4',
+          name: '프라바콜',
+          genericName: '프라바스타틴',
+          category: '스타틴(콜레스테롤 저하제)',
+          dosage: '40mg',
+          form: '정제',
+          shape: '원형',
+          color: '노란색',
+          manufacturer: '한국 BMS',
+          description: '혈중 콜레스테롤 수치를 낮추는데 사용됩니다.',
+          sideEffects: ['근육통', '관절통', '피로감'],
+          interactions: ['에리스로마이신', '사이클로스포린'],
+          prescriptionRequired: true,
+          image: 'https://example.com/pravachol.jpg'
+        },
+        {
+          id: 'm5',
+          name: '쿠마딘',
+          genericName: '와파린',
+          category: '항응고제',
+          dosage: '5mg',
+          form: '정제',
+          shape: '원형',
+          color: '분홍색',
+          manufacturer: '한국 BMS',
+          description: '혈전 형성을 방지하는데 사용됩니다.',
+          sideEffects: ['출혈 위험 증가', '자반', '혈뇨'],
+          interactions: ['아스피린', 'NSAIDs', '세인트 존스 워트'],
+          prescriptionRequired: true,
+          image: 'https://example.com/coumadin.jpg'
+        }
+      ];
+      
+      // 검색 필터 적용
+      let filteredMedications = [...medications];
+      
+      if (name) {
+        const searchTerm = (name as string).toLowerCase();
+        filteredMedications = filteredMedications.filter(med => 
+          med.name.toLowerCase().includes(searchTerm) || 
+          med.genericName.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      if (shape) {
+        filteredMedications = filteredMedications.filter(med => 
+          med.shape.toLowerCase().includes((shape as string).toLowerCase())
+        );
+      }
+      
+      if (color) {
+        filteredMedications = filteredMedications.filter(med => 
+          med.color.toLowerCase().includes((color as string).toLowerCase())
+        );
+      }
+      
+      if (dosage) {
+        filteredMedications = filteredMedications.filter(med => 
+          med.dosage.includes(dosage as string)
+        );
+      }
+      
+      res.json(filteredMedications);
+    } catch (error) {
+      console.error('약물 검색 오류:', error);
+      res.status(500).json({ message: '약물 정보를 검색하는 중 오류가 발생했습니다' });
+    }
+  });
+  
+  // 약품 이미지 스캔 API (카메라를 통해 약품 이미지 인식)
+  app.post('/api/medications/scan', async (req, res) => {
+    try {
+      const { imageData } = req.body;
+      
+      if (!imageData) {
+        return res.status(400).json({ message: '이미지 데이터가 필요합니다' });
+      }
+      
+      // 실제 구현에서는 이미지 인식 API를 사용하여 약품을 식별해야 합니다
+      // 현재는 간단한 데모 응답을 반환합니다
+      
+      // 응답 시간을 시뮬레이션하기 위한 지연
+      setTimeout(() => {
+        const results = [
+          {
+            id: 'm3',
+            name: '노바스크',
+            genericName: '암로디핀',
+            confidence: 0.92,
+            category: '칼슘 채널 차단제(혈압 약)',
+            dosage: '5mg',
+            image: 'https://example.com/norvasc.jpg'
+          },
+          {
+            id: 'm5',
+            name: '쿠마딘',
+            genericName: '와파린',
+            confidence: 0.78,
+            category: '항응고제',
+            dosage: '5mg',
+            image: 'https://example.com/coumadin.jpg'
+          }
+        ];
+        
+        res.json({
+          success: true,
+          results,
+          message: '2개의 약품이 인식되었습니다.'
+        });
+      }, 1500); // 1.5초 지연으로 인식 시간 시뮬레이션
+      
+    } catch (error) {
+      console.error('약물 스캔 오류:', error);
+      res.status(500).json({ message: '약물 이미지 스캔 중 오류가 발생했습니다' });
+    }
+  });
+  
+  // 맞춤형 식단 추천 API (일일 보고서 기반)
+  app.get('/api/users/:userId/dietary-recommendations', async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const { date } = req.query;
+    
+    try {
+      // 사용자 정보 가져오기
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: '사용자를 찾을 수 없습니다' });
+      }
+      
+      // 맞춤형 식단 추천 데이터 생성
+      const recommendations = {
+        dailyRecommendations: [
+          {
+            mealType: '아침',
+            menu: '오트밀과 베리 믹스, 무가당 두유',
+            calories: 350,
+            nutrition: {
+              carbs: 45,
+              protein: 15,
+              fat: 10,
+              fiber: 8
+            },
+            benefits: ['혈당 조절에 도움', '오메가-3 지방산 함유']
+          },
+          {
+            mealType: '점심',
+            menu: '현미밥, 구운 연어, 시금치 샐러드',
+            calories: 450,
+            nutrition: {
+              carbs: 50,
+              protein: 30,
+              fat: 15,
+              fiber: 6
+            },
+            benefits: ['오메가-3 지방산', '항산화 성분']
+          },
+          {
+            mealType: '저녁',
+            menu: '퀴노아 샐러드와 구운 닭가슴살',
+            calories: 400,
+            nutrition: {
+              carbs: 40,
+              protein: 35,
+              fat: 10,
+              fiber: 7
+            },
+            benefits: ['저지방 단백질', '복합 탄수화물']
+          },
+          {
+            mealType: '간식',
+            menu: '무염 견과류 혼합, 과일',
+            calories: 150,
+            nutrition: {
+              carbs: 10,
+              protein: 5,
+              fat: 10,
+              fiber: 3
+            },
+            benefits: ['건강한 지방', '불포화 지방산']
+          }
+        ],
+        totalCalories: 1350,
+        totalNutrition: {
+          carbs: 145,
+          protein: 85,
+          fat: 45,
+          fiber: 24
+        },
+        healthConditionTips: [
+          {
+            condition: '고혈압 관리',
+            recommendations: [
+              '나트륨 섭취를 제한하세요 (하루 2,000mg 이하)',
+              '칼륨이 풍부한 식품을 섭취하세요 (바나나, 감자, 아보카도)',
+              '카페인 섭취를 제한하세요'
+            ]
+          },
+          {
+            condition: '심장 건강 관리',
+            recommendations: [
+              '포화 지방과 트랜스 지방 섭취를 줄이세요',
+              '식이 섬유가 풍부한 음식을 섭취하세요',
+              '오메가-3 지방산이 풍부한 음식을 섭취하세요'
+            ]
+          }
+        ]
+      };
+      
+      res.json(recommendations);
+    } catch (error) {
+      console.error('식단 추천 생성 오류:', error);
+      res.status(500).json({ message: '식단 추천을 생성하는 중 오류가 발생했습니다' });
+    }
+  });
+  
+  // Medical Staff Search API
+  app.get('/api/hospitals/:hospitalId/staff', async (req, res) => {
+    const { hospitalId } = req.params;
+    const { speciality } = req.query;
+    
+    try {
+      // 실제 시스템에서는 외부 API 연동이나 데이터베이스 쿼리가 필요합니다.
+      // 현재는 샘플 데이터를 반환합니다
+      const staffList = [
+        {
+          id: '101',
+          name: '김민석',
+          speciality: '심장내과',
+          position: '교수',
+          hospitalId: '1', 
+          profileImage: 'https://randomuser.me/api/portraits/men/1.jpg',
+          experience: '15년',
+          education: '서울대학교 의과대학',
+          availableHours: '월~금 09:00-17:00'
+        },
+        {
+          id: '102',
+          name: '이지은',
+          speciality: '심장내과',
+          position: '부교수',
+          hospitalId: '1',
+          profileImage: 'https://randomuser.me/api/portraits/women/2.jpg',
+          experience: '12년',
+          education: '연세대학교 의과대학',
+          availableHours: '월,수,금 09:00-18:00'
+        },
+        {
+          id: '103',
+          name: '박준호',
+          speciality: '내과',
+          position: '전문의',
+          hospitalId: '1',
+          profileImage: 'https://randomuser.me/api/portraits/men/3.jpg',
+          experience: '8년',
+          education: '고려대학교 의과대학',
+          availableHours: '화,목 09:00-17:00'
+        },
+        {
+          id: '201',
+          name: '최유진',
+          speciality: '심장내과',
+          position: '교수',
+          hospitalId: '2',
+          profileImage: 'https://randomuser.me/api/portraits/women/4.jpg',
+          experience: '18년',
+          education: '연세대학교 의과대학',
+          availableHours: '월~금 09:00-17:00'
+        },
+        {
+          id: '301',
+          name: '정승호',
+          speciality: '심장내과',
+          position: '부교수',
+          hospitalId: '3',
+          profileImage: 'https://randomuser.me/api/portraits/men/5.jpg',
+          experience: '14년',
+          education: '울산대학교 의과대학',
+          availableHours: '월,화,수 10:00-18:00'
+        }
+      ];
+      
+      // 병원 ID로 필터링
+      let filteredStaff = staffList.filter(staff => staff.hospitalId === hospitalId);
+      
+      // 전문분야로 필터링 (선택 사항)
+      if (speciality) {
+        filteredStaff = filteredStaff.filter(staff => 
+          staff.speciality.toLowerCase() === (speciality as string).toLowerCase()
+        );
+      }
+      
+      res.json(filteredStaff);
+    } catch (error) {
+      console.error('의료진 검색 오류:', error);
+      res.status(500).json({ message: '의료진 정보를 검색하는 중 오류가 발생했습니다' });
+    }
+  });
+  
+  // 응급 상황 아이콘 상태 업데이트 API (가디언 모드용)
+  app.post('/api/users/:userId/emergency-icons/update', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { iconType, enabled, visibleTo } = req.body;
+      
+      if (!iconType) {
+        return res.status(400).json({ message: 'iconType은 필수입니다' });
+      }
+      
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: 'enabled 값은 필수입니다' });
+      }
+      
+      // 실제 구현에서는 사용자의 응급 상황 아이콘 설정을 데이터베이스에 저장해야 합니다
+      // 현재는 성공 응답만 반환합니다
+      
+      // 가디언들에게 아이콘 상태 변경 알림
+      if (visibleTo === 'guardians' || visibleTo === 'all') {
+        const notificationData = {
+          type: 'emergencyIconUpdate',
+          data: {
+            userId,
+            iconType,
+            enabled,
+            timestamp: new Date()
+          }
+        };
+        
+        await broadcastToGuardians(userId, notificationData);
+      }
+      
+      // 해당 사용자에게 알림
+      if (visibleTo === 'user' || visibleTo === 'all') {
+        const notificationData = {
+          type: 'emergencyIconUpdate',
+          data: {
+            iconType,
+            enabled,
+            timestamp: new Date()
+          }
+        };
+        
+        broadcastToUser(userId, notificationData);
+      }
+      
+      res.json({
+        success: true,
+        message: `응급 상황 아이콘 '${iconType}'이(가) ${enabled ? '활성화' : '비활성화'}되었습니다`,
+        userId,
+        iconType,
+        enabled
+      });
+    } catch (error) {
+      console.error('응급 상황 아이콘 업데이트 오류:', error);
+      res.status(500).json({ message: '응급 상황 아이콘 상태를 업데이트하는 중 오류가 발생했습니다' });
+    }
+  });
+  
+  // 응급 상황 아이콘 상태 조회 API
+  app.get('/api/users/:userId/emergency-icons', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      // 실제 구현에서는 데이터베이스에서 사용자의 응급 상황 아이콘 설정을 조회해야 합니다
+      // 현재는 샘플 데이터를 반환합니다
+      const emergencyIcons = [
+        {
+          iconType: 'emergency_call',
+          label: '응급 전화',
+          enabled: true,
+          color: 'red',
+          priority: 1
+        },
+        {
+          iconType: 'medical_alert',
+          label: '의료 알림',
+          enabled: true,
+          color: 'orange',
+          priority: 2
+        },
+        {
+          iconType: 'medication_reminder',
+          label: '약물 복용 알림',
+          enabled: true,
+          color: 'blue',
+          priority: 3
+        },
+        {
+          iconType: 'fall_detection',
+          label: '낙상 감지',
+          enabled: false,
+          color: 'purple',
+          priority: 4
+        },
+        {
+          iconType: 'location_sharing',
+          label: '위치 공유',
+          enabled: true,
+          color: 'green',
+          priority: 5
+        }
+      ];
+      
+      res.json(emergencyIcons);
+    } catch (error) {
+      console.error('응급 상황 아이콘 조회 오류:', error);
+      res.status(500).json({ message: '응급 상황 아이콘 상태를 조회하는 중 오류가 발생했습니다' });
+    }
+  });
+  
+  return httpServer;
+}

@@ -1,0 +1,1773 @@
+# 카카오맵 API를 활용한 의료서비스 검색 시스템 개선 가이드
+
+실제 굿닥, 똑닥, 나만의닥터 등 인기 의료 서비스 앱의 UI/UX 요소와 기능을 참고하여 카카오맵 API 기반 병원 검색 시스템을 개선한 종합 가이드입니다. 이 가이드는 심장전문병원, 응급의료센터, 24시간 운영 병원 등을 카테고리별로 필터링하고 지도에 효과적으로 표시하는 방법을 상세히 다룹니다.
+
+## 사용자 중심 UI/UX 설계 원칙
+
+최근 의료 서비스 앱들은 사용자 중심의 직관적인 인터페이스를 제공하는 방향으로 발전하고 있습니다. 나만의닥터 앱의 경우 사용자 니즈 기반의 직관적인 UI/UX를 구현하여 서비스 접근성을 높였습니다[8]. 이러한 트렌드를 반영하여 다음과 같은 UI 설계 원칙을 적용합니다.
+
+### 메인 화면 구성
+
+```html
+
+
+
+    
+    의료서비스 검색 시스템
+    
+    
+    
+        * { padding: 0; margin: 0; box-sizing: border-box; font-family: 'Noto Sans KR', sans-serif; }
+        body { background-color: #f8f9fa; }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        /* 상단 응급 배너 - 첨부된 이미지 참고 */
+        .emergency-banner {
+            background-color: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .emergency-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            background-color: white;
+            color: #ff6b6b;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .emergency-text {
+            flex-grow: 1;
+        }
+        
+        .emergency-text h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .emergency-text p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .emergency-call {
+            background-color: white;
+            color: #ff6b6b;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* 주소 선택 영역 - 똑닥 앱 참고 */
+        .address-selection {
+            background-color: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .address-selection h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .address-list {
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+            gap: 10px;
+            padding-bottom: 5px;
+        }
+        
+        .address-list::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        
+        .address-item {
+            background-color: #f1f3f5;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        
+        .address-item.active {
+            background-color: #339af0;
+            color: white;
+        }
+        
+        .address-item i {
+            margin-right: 5px;
+        }
+        
+        /* 카테고리 탭 - 굿닥 앱 참고 */
+        .category-tabs {
+            display: flex;
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .category-tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px 10px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .category-tab.active {
+            border-bottom-color: #339af0;
+            color: #339af0;
+            font-weight: bold;
+        }
+        
+        .category-tab i {
+            display: block;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        /* 지도 컨테이너 */
+        .map-container {
+            position: relative;
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 필터 영역 - 똑닥 앱 참고 */
+        .filter-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .filter-option {
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 14px;
+        }
+        
+        .filter-option:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .filter-option.active {
+            background-color: #e7f5ff;
+            color: #339af0;
+        }
+        
+        .filter-option i {
+            width: 20px;
+            margin-right: 8px;
+            text-align: center;
+        }
+        
+        /* 병원 목록 영역 */
+        .hospital-list-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        
+        .list-header {
+            padding: 15px;
+            border-bottom: 1px solid #f1f3f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .list-header h3 {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .list-filter {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filter-btn {
+            background-color: #f1f3f5;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .filter-btn.active {
+            background-color: #339af0;
+            color: white;
+        }
+        
+        .hospital-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .hospital-item {
+            padding: 15px;
+            border-bottom: 1px solid #f1f3f5;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .hospital-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .hospital-item:last-child {
+            border-bottom: none;
+        }
+        
+        .hospital-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .hospital-info {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .hospital-distance {
+            color: #339af0;
+        }
+        
+        .hospital-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-open {
+            background-color: #d3f9d8;
+            color: #2b8a3e;
+        }
+        
+        .status-closed {
+            background-color: #ffe3e3;
+            color: #c92a2a;
+        }
+        
+        .hospital-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        
+        .hospital-tag {
+            background-color: #e7f5ff;
+            color: #1971c2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        /* 상세 정보 오버레이 */
+        .hospital-overlay {
+            width: 300px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .overlay-header {
+            background-color: #339af0;
+            padding: 15px;
+            position: relative;
+        }
+        
+        .hospital-name-overlay {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 20px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .overlay-body {
+            padding: 15px;
+        }
+        
+        .overlay-info {
+            margin-bottom: 10px;
+        }
+        
+        .overlay-info-item {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .overlay-info-item i {
+            width: 20px;
+            margin-right: 10px;
+            color: #666;
+        }
+        
+        .overlay-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .call-btn {
+            background-color: #339af0;
+            color: white;
+        }
+        
+        .direction-btn {
+            background-color: #f1f3f5;
+            color: #333;
+        }
+    
+
+
+    
+        
+        
+            
+                
+            
+            
+                긴급 상황 시
+                즉시 119에 연락하세요
+            
+            119 전화
+        
+        
+        
+        
+            내 위치
+            
+                
+                     현재 위치
+                
+                
+                     집
+                
+                
+                     회사
+                
+                
+                     위치 추가
+                
+            
+        
+        
+        
+        
+            
+                
+                심장전문병원
+            
+            
+                
+                응급의료센터
+            
+            
+                
+                24시간 운영
+            
+            
+                
+                약국
+            
+        
+        
+        
+        
+            
+            
+            
+            
+                
+                     전체 병원
+                
+                
+                     진료중
+                
+                
+                     상급병원
+                
+                
+                     최저가
+                
+            
+        
+        
+        
+        
+            
+                주변 병원 목록
+                
+                    거리순
+                    평점순
+                    리뷰순
+                
+            
+            
+                
+                
+                    서울대학교병원
+                    
+                         1.2km
+                         02-2072-2114
+                        진료중
+                    
+                    
+                        심장내과
+                        응급의료센터
+                        24시간 운영
+                    
+                
+                
+            
+        
+    
+
+    
+    
+
+
+```
+
+## 주요 기능 구현
+
+### 1. 멀티 위치 등록 및 관리 시스템
+
+똑닥 앱에서는 최대 5개까지 주소를 등록하여 검색할 수 있는 기능을 제공합니다[7]. 이를 참고하여 사용자가 여러 위치를 저장하고 선택할 수 있는 기능을 구현합니다.
+
+```javascript
+// 위치 관리 시스템 구현
+class LocationManager {
+    constructor() {
+        this.locations = [];
+        this.currentLocationIndex = -1; // 현재 위치는 특별 케이스 (-1)
+        this.maxLocations = 5;
+        
+        // localStorage에서 저장된 위치 불러오기
+        this.loadLocations();
+    }
+    
+    loadLocations() {
+        const savedLocations = localStorage.getItem('savedLocations');
+        if (savedLocations) {
+            this.locations = JSON.parse(savedLocations);
+        }
+    }
+    
+    saveLocations() {
+        localStorage.setItem('savedLocations', JSON.stringify(this.locations));
+    }
+    
+    addLocation(name, address, lat, lng) {
+        if (this.locations.length >= this.maxLocations) {
+            return false; // 최대 저장 개수 초과
+        }
+        
+        const newLocation = {
+            id: Date.now(), // 고유 ID
+            name: name,
+            address: address,
+            lat: lat,
+            lng: lng
+        };
+        
+        this.locations.push(newLocation);
+        this.saveLocations();
+        return true;
+    }
+    
+    removeLocation(id) {
+        const index = this.locations.findIndex(loc => loc.id === id);
+        if (index !== -1) {
+            this.locations.splice(index, 1);
+            this.saveLocations();
+            return true;
+        }
+        return false;
+    }
+    
+    getCurrentLocation(callback) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const currentLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    callback(currentLocation);
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    callback(null);
+                }
+            );
+        } else {
+            console.error('Geolocation is not supported by this browser.');
+            callback(null);
+        }
+    }
+    
+    setActiveLocation(index) {
+        this.currentLocationIndex = index;
+        // 인덱스가 -1이면 현재 위치, 아니면 저장된 위치
+        return (index === -1) ? null : this.locations[index];
+    }
+    
+    // 위치 선택 UI 업데이트
+    updateLocationUI() {
+        const addressList = document.querySelector('.address-list');
+        addressList.innerHTML = `
+            
+                 현재 위치
+            
+        `;
+        
+        this.locations.forEach((location, index) => {
+            const locationItem = document.createElement('div');
+            locationItem.className = `address-item ${this.currentLocationIndex === index ? 'active' : ''}`;
+            locationItem.setAttribute('data-index', index);
+            locationItem.innerHTML = `
+                 ${location.name}
+            `;
+            addressList.appendChild(locationItem);
+        });
+        
+        // 위치 추가 버튼
+        if (this.locations.length  위치 추가';
+            addressList.appendChild(addButton);
+        }
+        
+        // 이벤트 리스너 추가
+        this.addLocationEventListeners();
+    }
+    
+    addLocationEventListeners() {
+        // 위치 아이템 클릭 이벤트
+        document.querySelectorAll('.address-item:not(.add-location)').forEach(item => {
+            item.addEventListener('click', () => {
+                const index = parseInt(item.getAttribute('data-index'));
+                this.setActiveLocation(index);
+                this.updateLocationUI();
+                
+                // 지도 중심 이동
+                if (index === -1) {
+                    this.getCurrentLocation(location => {
+                        if (location) {
+                            mapController.setCenter(location.lat, location.lng);
+                            mapController.searchHospitals(location.lat, location.lng);
+                        }
+                    });
+                } else {
+                    const location = this.locations[index];
+                    mapController.setCenter(location.lat, location.lng);
+                    mapController.searchHospitals(location.lat, location.lng);
+                }
+            });
+        });
+        
+        // 위치 추가 버튼 클릭 이벤트
+        const addButton = document.querySelector('.add-location');
+        if (addButton) {
+            addButton.addEventListener('click', () => {
+                this.showAddLocationModal();
+            });
+        }
+    }
+    
+    showAddLocationModal() {
+        // 위치 추가 모달 UI 구현
+        // 카카오맵 API의 주소 검색 서비스를 활용하여 구현
+        // 생략...
+    }
+}
+
+// 사용 예시
+const locationManager = new LocationManager();
+locationManager.updateLocationUI();
+```
+
+### 2. 카테고리별 병원 필터링 시스템
+
+첨부된 이미지에서는 심장전문병원, 응급의료센터, 24시간 운영 병원 등의 카테고리가 있었습니다. 이를 구현하고, 동시에 굿닥 앱의 다양한 필터링 기능을 참고하여 개선합니다.
+
+```javascript
+class HospitalFilter {
+    constructor() {
+        this.activeCategory = 'heart'; // 심장전문병원(heart), 응급의료센터(emergency), 24시간(24hours), 약국(pharmacy)
+        this.filters = {
+            isOpen: false,       // 진료중 필터
+            isHighGrade: false,  // 상급병원 필터
+            isLowPrice: false    // 최저가 필터
+        };
+        this.sortBy = 'distance'; // 정렬 기준: 거리순(distance), 평점순(rating), 리뷰순(review)
+        
+        this.initEventListeners();
+    }
+    
+    initEventListeners() {
+        // 카테고리 탭 클릭 이벤트
+        document.querySelectorAll('.category-tab').forEach((tab, index) => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // 카테고리 변경
+                const categories = ['heart', 'emergency', '24hours', 'pharmacy'];
+                this.activeCategory = categories[index];
+                
+                // 지도 및 목록 업데이트
+                this.updateResults();
+            });
+        });
+        
+        // 필터 옵션 클릭 이벤트
+        document.querySelectorAll('.filter-option').forEach((option, index) => {
+            option.addEventListener('click', () => {
+                option.classList.toggle('active');
+                
+                // 필터 상태 업데이트
+                const filterKeys = ['all', 'isOpen', 'isHighGrade', 'isLowPrice'];
+                const filterKey = filterKeys[index];
+                
+                if (filterKey === 'all') {
+                    // '전체 병원' 필터는 다른 모든 필터 해제
+                    document.querySelectorAll('.filter-option').forEach((opt, i) => {
+                        if (i !== 0) opt.classList.remove('active');
+                    });
+                    this.filters = {
+                        isOpen: false,
+                        isHighGrade: false,
+                        isLowPrice: false
+                    };
+                } else {
+                    // 다른 필터 선택 시 '전체 병원' 필터 해제
+                    document.querySelector('.filter-option:first-child').classList.remove('active');
+                    this.filters[filterKey] = option.classList.contains('active');
+                }
+                
+                // 지도 및 목록 업데이트
+                this.updateResults();
+            });
+        });
+        
+        // 정렬 옵션 클릭 이벤트
+        document.querySelectorAll('.filter-btn').forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // 정렬 기준 업데이트
+                const sortOptions = ['distance', 'rating', 'review'];
+                this.sortBy = sortOptions[index];
+                
+                // 목록 업데이트 (지도는 변경 없음)
+                this.updateHospitalList();
+            });
+        });
+    }
+    
+    updateResults() {
+        // 현재 선택된 위치 가져오기
+        let location;
+        if (locationManager.currentLocationIndex === -1) {
+            locationManager.getCurrentLocation(currentLocation => {
+                if (currentLocation) {
+                    this.fetchAndDisplayHospitals(currentLocation.lat, currentLocation.lng);
+                }
+            });
+        } else {
+            location = locationManager.locations[locationManager.currentLocationIndex];
+            this.fetchAndDisplayHospitals(location.lat, location.lng);
+        }
+    }
+    
+    fetchAndDisplayHospitals(lat, lng) {
+        // 카카오맵 API를 사용하여 병원 데이터 가져오기
+        // 카테고리 및 필터 조건에 맞는 병원만 필터링
+        
+        // 병원 데이터를 가져온 후 처리
+        mapController.clearMarkers();
+        mapController.displayFilteredHospitals(filteredHospitals);
+        this.updateHospitalList(filteredHospitals);
+    }
+    
+    updateHospitalList(hospitals) {
+        // 정렬 기준에 따라 병원 목록 정렬
+        const sortedHospitals = this.sortHospitals(hospitals, this.sortBy);
+        
+        // 병원 목록 UI 업데이트
+        const hospitalListElement = document.querySelector('.hospital-list');
+        hospitalListElement.innerHTML = '';
+        
+        if (sortedHospitals.length === 0) {
+            hospitalListElement.innerHTML = `
+                
+                    
+                    검색 결과가 없습니다.
+                
+            `;
+            return;
+        }
+        
+        sortedHospitals.forEach(hospital => {
+            const hospitalItem = document.createElement('div');
+            hospitalItem.className = 'hospital-item';
+            hospitalItem.setAttribute('data-id', hospital.id);
+            
+            // 진료중 상태 표시
+            const statusClass = hospital.isOpen ? 'status-open' : 'status-closed';
+            const statusText = hospital.isOpen ? '진료중' : '진료종료';
+            
+            // 병원 태그 생성
+            const tags = [];
+            if (hospital.categories.includes('heart')) tags.push('심장내과');
+            if (hospital.categories.includes('emergency')) tags.push('응급의료센터');
+            if (hospital.categories.includes('24hours')) tags.push('24시간 운영');
+            
+            // 병원 아이템 HTML 생성
+            hospitalItem.innerHTML = `
+                ${hospital.name}
+                
+                     ${hospital.distance.toFixed(1)}km
+                     ${hospital.tel}
+                    ${statusText}
+                
+                
+                    ${tags.map(tag => `${tag}`).join('')}
+                
+            `;
+            
+            hospitalListElement.appendChild(hospitalItem);
+            
+            // 병원 아이템 클릭 이벤트
+            hospitalItem.addEventListener('click', () => {
+                mapController.selectHospital(hospital.id);
+            });
+        });
+    }
+    
+    sortHospitals(hospitals, criterion) {
+        if (!hospitals) return [];
+        
+        const sortedHospitals = [...hospitals];
+        
+        switch (criterion) {
+            case 'distance':
+                sortedHospitals.sort((a, b) => a.distance - b.distance);
+                break;
+            case 'rating':
+                sortedHospitals.sort((a, b) => b.rating - a.rating);
+                break;
+            case 'review':
+                sortedHospitals.sort((a, b) => b.reviewCount - a.reviewCount);
+                break;
+        }
+        
+        return sortedHospitals;
+    }
+}
+
+// 사용 예시
+const hospitalFilter = new HospitalFilter();
+```
+
+### 3. 진료중 필터링과 병원 상세 정보 표시
+
+똑닥 앱에서는 진료중 필터를 쉽게 적용할 수 있고[7], 굿닥 앱에서는 병원 상세 정보와 리뷰를 제공합니다[9]. 이러한 기능을 구현합니다.
+
+```javascript
+class MapController {
+    constructor() {
+        this.map = null;
+        this.markers = [];
+        this.clusterer = null;
+        this.infoWindow = null;
+        this.hospitals = [];
+        
+        this.initMap();
+    }
+    
+    initMap() {
+        const mapContainer = document.getElementById('map');
+        const mapOption = {
+            center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울 시청
+            level: 5
+        };
+        
+        this.map = new kakao.maps.Map(mapContainer, mapOption);
+        
+        // 마커 클러스터러 초기화
+        this.clusterer = new kakao.maps.MarkerClusterer({
+            map: this.map,
+            averageCenter: true,
+            minLevel: 6,
+            disableClickZoom: true,
+            styles: [{
+                width: '50px', height: '50px',
+                background: 'rgba(51, 154, 240, 0.8)',
+                color: '#fff',
+                textAlign: 'center',
+                fontWeight: 'bold',
+                lineHeight: '50px',
+                borderRadius: '25px'
+            }]
+        });
+        
+        // 현재 위치로 이동
+        this.moveToCurrentLocation();
+    }
+    
+    moveToCurrentLocation() {
+        locationManager.getCurrentLocation(location => {
+            if (location) {
+                this.setCenter(location.lat, location.lng);
+                this.searchHospitals(location.lat, location.lng);
+            }
+        });
+    }
+    
+    setCenter(lat, lng) {
+        const position = new kakao.maps.LatLng(lat, lng);
+        this.map.setCenter(position);
+    }
+    
+    searchHospitals(lat, lng, category = hospitalFilter.activeCategory) {
+        // 카카오맵 API를 사용하여 주변 병원 검색
+        const options = {
+            location: new kakao.maps.LatLng(lat, lng),
+            radius: 10000, // 10km 반경
+            sort: kakao.maps.services.SortBy.DISTANCE
+        };
+        
+        // 카테고리 코드 설정
+        let categoryCode = '';
+        switch (category) {
+            case 'heart':
+                categoryCode = 'HP8'; // 병원 카테고리 코드 (예시)
+                break;
+            case 'emergency':
+                categoryCode = 'HP6'; // 응급의료센터 카테고리 코드 (예시)
+                break;
+            case '24hours':
+                categoryCode = 'HP9'; // 24시간 병원 카테고리 코드 (예시)
+                break;
+            case 'pharmacy':
+                categoryCode = 'PM9'; // 약국 카테고리 코드
+                break;
+        }
+        
+        const places = new kakao.maps.services.Places();
+        places.categorySearch(categoryCode, (results, status) => {
+            if (status === kakao.maps.services.Status.OK) {
+                // 검색 결과를 병원 데이터로 변환
+                this.hospitals = results.map(result => {
+                    // 실제 거리 계산 (직선 거리가 아닌 도로 기준)
+                    const distance = this.calculateDistance(
+                        lat, lng,
+                        result.y, result.x
+                    );
+                    
+                    // 진료중 여부 확인 (현재 시간과 영업시간 비교)
+                    const isOpen = this.checkIfOpen(result.place_name);
+                    
+                    return {
+                        id: result.id,
+                        name: result.place_name,
+                        address: result.address_name,
+                        tel: result.phone || '정보 없음',
+                        lat: result.y,
+                        lng: result.x,
+                        distance: distance,
+                        categories: this.getCategoriesFromTags(result.category_name),
+                        isOpen: isOpen,
+                        rating: (Math.random() * 2 + 3).toFixed(1), // 임시 데이터
+                        reviewCount: Math.floor(Math.random() * 100), // 임시 데이터
+                        openHours: this.getOpenHours(result.place_name) // 임시 데이터
+                    };
+                });
+                
+                // 필터링 및 마커 표시
+                const filteredHospitals = this.applyFilters(this.hospitals);
+                this.displayFilteredHospitals(filteredHospitals);
+                hospitalFilter.updateHospitalList(filteredHospitals);
+            } else {
+                console.error('카테고리 검색 실패:', status);
+            }
+        });
+    }
+    
+    applyFilters(hospitals) {
+        // 현재 설정된 필터를 적용
+        return hospitals.filter(hospital => {
+            if (hospitalFilter.filters.isOpen && !hospital.isOpen) return false;
+            if (hospitalFilter.filters.isHighGrade && !this.isHighGradeHospital(hospital)) return false;
+            if (hospitalFilter.filters.isLowPrice && !this.isLowPriceHospital(hospital)) return false;
+            return true;
+        });
+    }
+    
+    displayFilteredHospitals(hospitals) {
+        this.clearMarkers();
+        
+        hospitals.forEach(hospital => {
+            // 마커 이미지 설정
+            let markerImageSrc;
+            if (hospital.categories.includes('emergency')) {
+                markerImageSrc = 'images/marker-emergency.png';
+            } else if (hospital.categories.includes('heart')) {
+                markerImageSrc = 'images/marker-heart.png';
+            } else if (hospital.categories.includes('24hours')) {
+                markerImageSrc = 'images/marker-24hours.png';
+            } else if (hospitalFilter.activeCategory === 'pharmacy') {
+                markerImageSrc = 'images/marker-pharmacy.png';
+            } else {
+                markerImageSrc = 'images/marker-hospital.png';
+            }
+            
+            const markerImage = new kakao.maps.MarkerImage(
+                markerImageSrc,
+                new kakao.maps.Size(32, 36)
+            );
+            
+            // 마커 생성
+            const position = new kakao.maps.LatLng(hospital.lat, hospital.lng);
+            const marker = new kakao.maps.Marker({
+                position: position,
+                image: markerImage
+            });
+            
+            // 마커 클릭 이벤트
+            kakao.maps.event.addListener(marker, 'click', () => {
+                this.showHospitalInfoWindow(hospital, marker);
+            });
+            
+            // 마커 저장 및 지도에 표시
+            this.markers.push(marker);
+            marker.setMap(this.map);
+        });
+        
+        // 마커 클러스터링 적용
+        this.clusterer.addMarkers(this.markers);
+    }
+    
+    clearMarkers() {
+        this.markers.forEach(marker => marker.setMap(null));
+        this.markers = [];
+        this.clusterer.clear();
+        
+        // 열려있는 인포윈도우 닫기
+        if (this.infoWindow) {
+            this.infoWindow.close();
+        }
+    }
+    
+    showHospitalInfoWindow(hospital, marker) {
+        // 기존 인포윈도우 닫기
+        if (this.infoWindow) {
+            this.infoWindow.close();
+        }
+        
+        // 카테고리 아이콘 생성
+        const categoryIcons = hospital.categories.map(category => {
+            let icon, text;
+            if (category === 'heart') {
+                icon = 'fas fa-heartbeat';
+                text = '심장전문';
+            } else if (category === 'emergency') {
+                icon = 'fas fa-ambulance';
+                text = '응급의료';
+            } else if (category === '24hours') {
+                icon = 'fas fa-clock';
+                text = '24시간';
+            } else {
+                icon = 'fas fa-hospital';
+                text = '병원';
+            }
+            return ` ${text}`;
+        }).join('');
+        
+        // 인포윈도우 내용 생성
+        const content = `
+            
+                
+                    ${hospital.name}
+                    ×
+                
+                
+                    
+                        ${categoryIcons}
+                        
+                            ${hospital.isOpen ? '진료중' : '진료종료'}
+                        
+                    
+                    
+                        
+                            
+                            ${hospital.address}
+                        
+                        
+                            
+                            ${hospital.tel}
+                        
+                        
+                            
+                            ${hospital.openHours}
+                        
+                        
+                            
+                            평점 ${hospital.rating} (${hospital.reviewCount}개 리뷰)
+                        
+                    
+                    
+                        
+                             전화
+                        
+                        
+                             길찾기
+                        
+                    
+                
+            
+        `;
+        
+        // 인포윈도우 생성 및 표시
+        this.infoWindow = new kakao.maps.CustomOverlay({
+            content: content,
+            position: marker.getPosition(),
+            xAnchor: 0.5,
+            yAnchor: 1.3
+        });
+        
+        this.infoWindow.setMap(this.map);
+    }
+    
+    closeInfoWindow() {
+        if (this.infoWindow) {
+            this.infoWindow.setMap(null);
+            this.infoWindow = null;
+        }
+    }
+    
+    selectHospital(hospitalId) {
+        const hospital = this.hospitals.find(h => h.id === hospitalId);
+        if (hospital) {
+            // 해당 병원 위치로 지도 이동
+            const position = new kakao.maps.LatLng(hospital.lat, hospital.lng);
+            this.map.setCenter(position);
+            this.map.setLevel(3); // 확대
+            
+            // 해당 병원의 마커 찾기
+            const marker = this.markers.find(m => {
+                const markerPosition = m.getPosition();
+                return markerPosition.getLat() === hospital.lat && markerPosition.getLng() === hospital.lng;
+            });
+            
+            if (marker) {
+                // 병원 정보 오버레이 표시
+                this.showHospitalInfoWindow(hospital, marker);
+            }
+        }
+    }
+    
+    showDirections(targetLat, targetLng) {
+        locationManager.getCurrentLocation(currentLocation => {
+            if (currentLocation) {
+                // 카카오맵 길찾기 URL 생성
+                const url = `https://map.kakao.com/link/to/${targetLat},${targetLng}/from/${currentLocation.lat},${currentLocation.lng}`;
+                window.open(url, '_blank');
+            } else {
+                alert('현재 위치를 확인할 수 없습니다.');
+            }
+        });
+    }
+    
+    // 추가 유틸리티 함수들
+    calculateDistance(lat1, lon1, lat2, lon2) {
+        // 하버사인 공식을 사용한 두 지점 간의 거리 계산
+        const R = 6371; // 지구 반경 (km)
+        const dLat = this.deg2rad(lat2 - lat1);
+        const dLon = this.deg2rad(lon2 - lon1);
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        return R * c; // 킬로미터 단위 거리
+    }
+    
+    deg2rad(deg) {
+        return deg * (Math.PI/180);
+    }
+    
+    checkIfOpen(hospitalName) {
+        // 현재 시간과 영업시간 비교 (실제로는 API에서 영업시간 정보를 가져와야 함)
+        const now = new Date();
+        const hour = now.getHours();
+        const day = now.getDay(); // 0(일) ~ 6(토)
+        
+        // 24시간 운영 병원은 항상 오픈
+        if (hospitalName.includes('24시간') || hospitalName.includes('응급의료센터')) {
+            return true;
+        }
+        
+        // 주말 체크
+        if (day === 0 || day === 6) {
+            // 주말 영업시간: 오전 9시 ~ 오후 1시 (예시)
+            return hour >= 9 && hour = 9 && hour  {
+            const now = new Date().getTime();
+            
+            if (now - lastClickTime = 5) {
+                    // 응급 모드 활성화
+                    this.activateEmergencyMode();
+                    clickCount = 0;
+                }
+            } else {
+                clickCount = 1;
+            }
+            
+            lastClickTime = now;
+        });
+    }
+    
+    activateEmergencyMode() {
+        // 응급 모드 UI 표시
+        const emergencyModal = document.createElement('div');
+        emergencyModal.className = 'emergency-modal';
+        emergencyModal.innerHTML = `
+            
+                 응급 상황입니까?
+                
+                    
+                        
+                        119 연결
+                    
+                    
+                        
+                        가까운 응급실
+                    
+                    
+                        
+                        취소
+                    
+                
+            
+        `;
+        
+        document.body.appendChild(emergencyModal);
+        
+        // 이벤트 리스너 추가
+        emergencyModal.querySelector('.call-119').addEventListener('click', () => {
+            window.location.href = 'tel:119';
+        });
+        
+        emergencyModal.querySelector('.find-emergency').addEventListener('click', () => {
+            // 가까운 응급실 찾기
+            document.querySelectorAll('.category-tab')[1].click(); // 응급의료센터 탭 클릭
+            this.closeEmergencyModal();
+        });
+        
+        emergencyModal.querySelector('.close-emergency').addEventListener('click', () => {
+            this.closeEmergencyModal();
+        });
+    }
+    
+    closeEmergencyModal() {
+        const modal = document.querySelector('.emergency-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+}
+
+// 사용 예시
+const emergencyService = new EmergencyService();
+```
+
+## 애플리케이션 초기화 및 리뷰 기능 구현
+
+굿닥 앱에서는 병원 방문자 리뷰를 제공하여 사용자가 병원을 선택할 때 참고할 수 있게 합니다[9]. 이 기능을 구현하고 애플리케이션을 초기화합니다.
+
+```javascript
+// 리뷰 시스템 구현
+class ReviewSystem {
+    constructor() {
+        this.reviews = {};
+        
+        // localStorage에서 저장된 리뷰 불러오기
+        this.loadReviews();
+    }
+    
+    loadReviews() {
+        const savedReviews = localStorage.getItem('hospitalReviews');
+        if (savedReviews) {
+            this.reviews = JSON.parse(savedReviews);
+        }
+    }
+    
+    saveReviews() {
+        localStorage.setItem('hospitalReviews', JSON.stringify(this.reviews));
+    }
+    
+    getReviews(hospitalId) {
+        return this.reviews[hospitalId] || [];
+    }
+    
+    addReview(hospitalId, reviewData) {
+        if (!this.reviews[hospitalId]) {
+            this.reviews[hospitalId] = [];
+        }
+        
+        const newReview = {
+            id: Date.now(),
+            ...reviewData,
+            date: new Date().toISOString()
+        };
+        
+        this.reviews[hospitalId].push(newReview);
+        this.saveReviews();
+        
+        return newReview;
+    }
+    
+    deleteReview(hospitalId, reviewId) {
+        if (this.reviews[hospitalId]) {
+            const index = this.reviews[hospitalId].findIndex(review => review.id === reviewId);
+            if (index !== -1) {
+                this.reviews[hospitalId].splice(index, 1);
+                this.saveReviews();
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    calculateAverageRating(hospitalId) {
+        const hospitalReviews = this.getReviews(hospitalId);
+        if (hospitalReviews.length === 0) return 0;
+        
+        const sum = hospitalReviews.reduce((total, review) => total + review.rating, 0);
+        return sum / hospitalReviews.length;
+    }
+    
+    showReviewModal(hospital) {
+        // 리뷰 작성 모달 표시
+        const reviewModal = document.createElement('div');
+        reviewModal.className = 'review-modal';
+        reviewModal.innerHTML = `
+            
+                
+                    리뷰 작성
+                    ×
+                
+                
+                    ${hospital.name}
+                    
+                        평점
+                        
+                            
+                            
+                            
+                            
+                            
+                        
+                    
+                    
+                        리뷰 내용
+                        
+                    
+                
+                
+                    리뷰 등록
+                
+            
+        `;
+        
+        document.body.appendChild(reviewModal);
+        
+        // 별점 선택 이벤트
+        let selectedRating = 0;
+        reviewModal.querySelectorAll('.star-rating i').forEach(star => {
+            star.addEventListener('click', () => {
+                selectedRating = parseInt(star.getAttribute('data-rating'));
+                
+                // 별점 UI 업데이트
+                reviewModal.querySelectorAll('.star-rating i').forEach((s, index) => {
+                    if (index  {
+            this.checkReviewFormValidity(reviewModal, selectedRating);
+        });
+        
+        // 리뷰 등록 버튼 클릭 이벤트
+        reviewModal.querySelector('.submit-review-btn').addEventListener('click', () => {
+            const reviewText = textarea.value.trim();
+            
+            if (selectedRating > 0 && reviewText) {
+                // 리뷰 추가
+                this.addReview(hospital.id, {
+                    rating: selectedRating,
+                    text: reviewText,
+                    author: '익명' // 실제로는 로그인 사용자 정보 사용
+                });
+                
+                // 리뷰 목록 업데이트
+                this.displayReviews(hospital.id);
+                
+                // 모달 닫기
+                this.closeReviewModal();
+            }
+        });
+        
+        // 모달 닫기 버튼 클릭 이벤트
+        reviewModal.querySelector('.close-review-modal').addEventListener('click', () => {
+            this.closeReviewModal();
+        });
+    }
+    
+    checkReviewFormValidity(modalElement, rating) {
+        const textarea = modalElement.querySelector('textarea');
+        const submitButton = modalElement.querySelector('.submit-review-btn');
+        
+        if (rating > 0 && textarea.value.trim().length >= 10) {
+            submitButton.disabled = false;
+        } else {
+            submitButton.disabled = true;
+        }
+    }
+    
+    closeReviewModal() {
+        const modal = document.querySelector('.review-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+    
+    displayReviews(hospitalId) {
+        const hospitalReviews = this.getReviews(hospitalId);
+        
+        // 리뷰 목록 표시 (인포윈도우 또는 별도 모달)
+        // 구현 생략...
+    }
+}
+
+// 애플리케이션 초기화
+function initApp() {
+    // 지도 컨트롤러 초기화 (이미 구현됨)
+    const mapController = new MapController();
+    
+    // 위치 관리자 초기화 (이미 구현됨)
+    const locationManager = new LocationManager();
+    locationManager.updateLocationUI();
+    
+    // 병원 필터 초기화 (이미 구현됨)
+    const hospitalFilter = new HospitalFilter();
+    
+    // 리뷰 시스템 초기화
+    const reviewSystem = new ReviewSystem();
+    
+    // 응급 서비스 초기화 (이미 구현됨)
+    const emergencyService = new EmergencyService();
+    
+    // 글로벌 객체로 등록
+    window.mapController = mapController;
+    window.locationManager = locationManager;
+    window.hospitalFilter = hospitalFilter;
+    window.reviewSystem = reviewSystem;
+    window.emergencyService = emergencyService;
+}
+
+// 페이지 로드 시 앱 초기화
+window.onload = initApp;
+```
+
+## 스타일 개선 및 CSS 추가
+
+위에서 제공한 기본 CSS에 나만의닥터, 굿닥, 똑닥 등의 앱 디자인을 참고하여 추가적인 스타일을 적용합니다.
+
+```css
+/* 응급 모달 스타일 */
+.emergency-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.emergency-modal-content {
+    width: 90%;
+    max-width: 400px;
+    background-color: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.emergency-modal-content h2 {
+    background-color: #ff6b6b;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    margin: 0;
+    font-size: 18px;
+}
+
+.emergency-modal-content h2 i {
+    margin-right: 10px;
+}
+
+.emergency-actions {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.emergency-action-btn {
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emergency-action-btn i {
+    margin-right: 10px;
+}
+
+.call-119 {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+.find-emergency {
+    background-color: #339af0;
+    color: white;
+}
+
+.close-emergency {
+    background-color: #f1f3f5;
+    color: #333;
+}
+
+/* 리뷰 모달 스타일 */
+.review-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.review-modal-content {
+    width: 90%;
+    max-width: 400px;
+    background-color: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.review-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid #f1f3f5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.review-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.close-review-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.review-modal-body {
+    padding: 15px;
+    flex-grow: 1;
+}
+
+.review-modal-body h4 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.rating-input {
+    margin-bottom: 15px;
+}
+
+.rating-input p {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.star-rating {
+    display: flex;
+    gap: 5px;
+}
+
+.star-rating i {
+    font-size: 24px;
+    color: #fcc419;
+    cursor: pointer;
+}
+
+.review-text-input p {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.review-text-input textarea {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    resize: none;
+    font-size: 14px;
+}
+
+.review-modal-footer {
+    padding: 15px;
+    border-top: 1px solid #f1f3f5;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.submit-review-btn {
+    background-color: #339af0;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.submit-review-btn:disabled {
+    background-color: #adb5bd;
+    cursor: not-allowed;
+}
+
+/* 모바일 최적화 스타일 */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .category-tabs {
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    
+    .category-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .category-tab {
+        min-width: 80px;
+        white-space: nowrap;
+    }
+    
+    .map-container {
+        height: 300px;
+    }
+    
+    .hospital-list {
+        max-height: 300px;
+    }
+}
+
+/* 다크 모드 스타일 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #222;
+        color: #f8f9fa;
+    }
+    
+    .address-selection, .category-tabs, .hospital-list-container {
+        background-color: #333;
+    }
+    
+    .hospital-name, .list-header h3 {
+        color: #f8f9fa;
+    }
+    
+    .hospital-info {
+        color: #adb5bd;
+    }
+    
+    .address-item {
+        background-color: #444;
+        color: #f8f9fa;
+    }
+    
+    .filter-btn {
+        background-color: #444;
+        color: #f8f9fa;
+    }
+    
+    .hospital-item:hover {
+        background-color: #444;
+    }
+    
+    .hospital-item {
+        border-bottom-color: #444;
+    }
+}
+```
+
+## 결론
+
+이 가이드에서는 카카오맵 API를 활용하여 심장전문병원, 응급의료센터, 24시간 운영 병원 등을 카테고리별로 검색하고 표시하는 시스템을 구현하는 방법을 상세히 설명했습니다. 특히 굿닥, 똑닥, 나만의닥터 등 인기 의료 서비스 앱의 UI/UX 요소와 기능을 참고하여 현대적이고 사용자 친화적인 인터페이스를 구현하였습니다.
+
+주요 개선 사항으로는:
+1. 응급 상황 배너 및 빠른 접근 기능 (119 연결)[1]
+2. 다중 위치 등록 및 관리 기능 (똑닥 앱 참고)[7]
+3. 직관적인 카테고리 탭 및 필터 옵션 (굿닥, 똑닥 앱 참고)[3][6][7]
+4. 병원 상세 정보 및 리뷰 시스템 (굿닥 앱 참고)[9]
+5. 최저가 병원 및 진료중 필터링 (나만의닥터 앱 참고)[8]
+6. 응답형 모바일 최적화 디자인[10]
+
+이러한 기능들을 통합하여 구현함으로써, 사용자는 필요한 의료 서비스를 더 쉽고 빠르게 찾을 수 있게 되었습니다. 또한 응급 상황에서도 신속하게 대응할 수 있는 UI를 제공하여 사용자 경험을 크게 향상시켰습니다.
+
+이 시스템은 추후 비대면 진료, 예약 시스템, 건강 기록 관리 등의 기능을 추가하여 더욱 종합적인 의료 서비스 플랫폼으로 확장할 수 있습니다.
+
+Citations:
+[1] https://pplx-res.cloudinary.com/image/upload/v1744467438/user_uploads/aoGLrnaPQCazpUN/image.jpg
+[2] https://www.perplexity.ai/search/silje-guhyeone-eoryeoumeul-gye-ZG4brnJKQgGpkcyhaWcHMw
+[3] https://www.venturesquare.net/2504
+[4] https://dribbble.com/tags/hospital-finder
+[5] https://play.google.com/store/apps/details?id=com.docterz.connect.mydoctor
+[6] https://www.youtube.com/watch?v=Z3RCwOk117I
+[7] https://blog.naver.com/bbros6/223011277967
+[8] https://brunch.co.kr/@boldydesign/175
+[9] https://rocketreach.co/gusdag-goodoc-profile_b45b64e4fc5f1733
+[10] https://dribbble.com/search/hospital-app-ui
+[11] https://www.healthgrades.com
+[12] http://www.docdocdoc.co.kr/news/articleView.html?idxno=133080
+[13] https://brunch.co.kr/@boldydesign/155
+[14] https://m.medigatenews.com/news/1943872208
+[15] https://apps.apple.com/ru/app/%EA%B5%BF%EB%8B%A5-%EB%B3%91%EC%9B%90-%EC%A0%91%EC%88%98-%EB%B3%91%EC%9B%90-%EC%98%88%EC%95%BD-%EB%B9%84%EB%8C%80%EB%A9%B4-%EC%A7%84%EB%A3%8C-%ED%95%84%EC%88%98-%EC%95%B1/id517637141?l=en-GB
+[16] https://www.pinterest.com/pin/search-doctor-mobile-app-design--195695546286725034/
+[17] https://myhealth.gov.mt
+[18] https://www.khug.or.kr/openapi/web/ap/in/apin000003.jsp?mode=S&articleId=20208&currentPage=1&title=%28%EF%BF%BD%DF%BF%EF%BF%BD%EF%BF%BD%CE%B8%EF%BF%BD%EF%BF%BD%EF%BF%BD%EF%BF%BD+%EF%BF%BD%EF%BF%BD%EF%BF%BD%C2%B4%DA%A1%EF%BF%BD+%EF%BF%BD%CF%B3%EF%BF%BD%EF%BF%BD%EF%BF%BD+%EF%BF%BD%EF%BF%BD%EF%BF%BD%C4%B5%EF%BF%BD+%EF%BF%BD%EF%BF%BD%EF%BF%BD%EF%BF%BD+%EF%BF%BD%EF%BF%BD%21%29
+[19] https://weeklyuxuichallenge.oopy.io/fb84ee20-d287-4dc8-81c7-30c0d74b1490
+[20] https://play.google.com/store/apps/details?id=com.merakiplace.mydoctor
+[21] https://blog.google/products/google-cloud/business-leaders-building-with-ai/
+[22] https://ijrpr.com/uploads/V5ISSUE1/IJRPR21860.pdf
+
+---
+Perplexity로부터의 답변: pplx.ai/share

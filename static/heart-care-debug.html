@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare 연결 디버그</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 { 
+            color: #FF6D94; 
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 15px 0;
+            margin: 15px 0;
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color: #ff5c88;
+        }
+        .button.alt {
+            background-color: #4630EB;
+        }
+        .button.neutral {
+            background-color: #607d8b;
+        }
+        .log-container {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid #ddd;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info {
+            color: #2196F3;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #F44336;
+        }
+        .timestamp {
+            color: #9E9E9E;
+            font-size: 0.85em;
+            margin-right: 8px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.online {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status.offline {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <h1>HeartCare 연결 디버그</h1>
+    
+    <div class="card">
+        <h2>서버 연결 테스트</h2>
+        <div id="server-status" class="status offline">서버 상태 확인 중...</div>
+        
+        <div class="input-group">
+            <label for="api-url">API 테스트 URL:</label>
+            <input type="text" id="api-url" value="/api/users/1" placeholder="테스트할 API 엔드포인트 URL">
+        </div>
+        
+        <button id="test-api" class="button">API 테스트</button>
+        <button id="test-websocket" class="button alt">웹소켓 테스트</button>
+    </div>
+    
+    <div class="card">
+        <h2>로그</h2>
+        <div id="log-container" class="log-container"></div>
+        <button id="clear-logs" class="button neutral">로그 지우기</button>
+    </div>
+    
+    <div class="card">
+        <h2>Expo 연결 테스트</h2>
+        <div class="input-group">
+            <label for="expo-url">Expo URL:</label>
+            <input type="text" id="expo-url" value="exp://exp.host/@hsml/heart-care-expo" placeholder="테스트할 Expo URL">
+        </div>
+        
+        <button id="generate-deep-link" class="button">딥링크 생성</button>
+        <button id="generate-intent" class="button alt">인텐트 URL 생성</button>
+        <button id="generate-universal" class="button">유니버설 링크 생성</button>
+        
+        <div id="generated-url" style="margin-top: 20px;"></div>
+    </div>
+    
+    <div class="card">
+        <h2>네트워크 정보</h2>
+        <div id="network-info">로딩 중...</div>
+    </div>
+
+    <script>
+        // 로그 관련 함수
+        function log(message, type = 'info') {
+            const container = document.getElementById('log-container');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">${timestamp}</span> ${message}`;
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // 서버 상태 테스트
+        function testServer() {
+            const statusElement = document.getElementById('server-status');
+            
+            fetch('/api/users/1')
+                .then(response => {
+                    if (response.ok) {
+                        statusElement.className = 'status online';
+                        statusElement.textContent = '서버 온라인';
+                        log('서버 연결 성공', 'success');
+                        return response.json();
+                    } else {
+                        throw new Error(`서버 응답 에러: ${response.status}`);
+                    }
+                })
+                .then(data => {
+                    log(`서버 응답 데이터: ${JSON.stringify(data)}`, 'info');
+                })
+                .catch(error => {
+                    statusElement.className = 'status offline';
+                    statusElement.textContent = '서버 오프라인';
+                    log(`서버 연결 실패: ${error.message}`, 'error');
+                });
+        }
+        
+        // API 테스트
+        function testAPI() {
+            const apiUrl = document.getElementById('api-url').value;
+            log(`API 테스트 중: ${apiUrl}`, 'info');
+            
+            fetch(apiUrl)
+                .then(response => {
+                    log(`API 응답 상태: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                    return response.json().catch(e => {
+                        log('JSON 파싱 실패, 텍스트로 응답 받는 중', 'error');
+                        return response.text();
+                    });
+                })
+                .then(data => {
+                    log(`API 응답 데이터: ${typeof data === 'string' ? data : JSON.stringify(data)}`, 'info');
+                })
+                .catch(error => {
+                    log(`API 요청 실패: ${error.message}`, 'error');
+                });
+        }
+        
+        // 웹소켓 테스트
+        function testWebSocket() {
+            log('웹소켓 연결 시도 중...', 'info');
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            log(`웹소켓 URL: ${wsUrl}`, 'info');
+            
+            try {
+                const socket = new WebSocket(wsUrl);
+                
+                socket.onopen = function() {
+                    log('웹소켓 연결 성공', 'success');
+                    
+                    // 테스트 메시지 전송
+                    socket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+                    log('핑 메시지 전송됨', 'info');
+                };
+                
+                socket.onmessage = function(event) {
+                    log(`웹소켓 메시지 수신: ${event.data}`, 'success');
+                };
+                
+                socket.onerror = function(error) {
+                    log(`웹소켓 에러: ${error.message || '알 수 없는 에러'}`, 'error');
+                };
+                
+                socket.onclose = function(event) {
+                    log(`웹소켓 연결 종료: 코드=${event.code}, 이유=${event.reason || '알 수 없음'}`, 'info');
+                };
+            } catch (error) {
+                log(`웹소켓 생성 중 에러: ${error.message}`, 'error');
+            }
+        }
+        
+        // Expo 딥링크 생성
+        function generateDeepLink() {
+            const expoUrl = document.getElementById('expo-url').value;
+            const container = document.getElementById('generated-url');
+            
+            try {
+                const url = new URL(expoUrl);
+                
+                // 다양한 딥링크 형식 생성
+                const links = [
+                    { scheme: 'exp', url: expoUrl.replace(/^exp(s)?:\/\//, 'exp://') },
+                    { scheme: 'exps', url: expoUrl.replace(/^exp(s)?:\/\//, 'exps://') },
+                    { scheme: 'expo', url: expoUrl.replace(/^exp(s)?:\/\//, 'expo://') }
+                ];
+                
+                container.innerHTML = '<h3>생성된 딥링크</h3>';
+                
+                links.forEach(link => {
+                    const linkElement = document.createElement('div');
+                    linkElement.innerHTML = `
+                        <p><strong>${link.scheme}://</strong> 스킴:</p>
+                        <p><a href="${link.url}" style="word-break: break-all;">${link.url}</a></p>
+                        <hr>
+                    `;
+                    container.appendChild(linkElement);
+                });
+                
+                log(`딥링크 생성됨: ${links.map(l => l.url).join(', ')}`, 'success');
+            } catch (error) {
+                container.innerHTML = `<p class="error">URL 파싱 에러: ${error.message}</p>`;
+                log(`딥링크 생성 실패: ${error.message}`, 'error');
+            }
+        }
+        
+        // Android Intent URL 생성
+        function generateIntentUrl() {
+            const expoUrl = document.getElementById('expo-url').value;
+            const container = document.getElementById('generated-url');
+            
+            try {
+                const url = new URL(expoUrl);
+                const host = url.host;
+                const path = url.pathname + url.search;
+                
+                // Android Intent URL 형식: intent://host/path#Intent;scheme=exp;package=host.exp.exponent;end
+                const intentUrl = `intent://${host}${path}#Intent;scheme=exp;package=host.exp.exponent;end`;
+                
+                container.innerHTML = `
+                    <h3>Android Intent URL</h3>
+                    <p><a href="${intentUrl}" style="word-break: break-all;">${intentUrl}</a></p>
+                `;
+                
+                log(`인텐트 URL 생성됨: ${intentUrl}`, 'success');
+            } catch (error) {
+                container.innerHTML = `<p class="error">URL 파싱 에러: ${error.message}</p>`;
+                log(`인텐트 URL 생성 실패: ${error.message}`, 'error');
+            }
+        }
+        
+        // iOS Universal Link 생성
+        function generateUniversalLink() {
+            const expoUrl = document.getElementById('expo-url').value;
+            const container = document.getElementById('generated-url');
+            
+            try {
+                // iOS Universal Link 형식: https://exp.host/--/to-exp/encoded_expo_url
+                const encodedUrl = encodeURIComponent(expoUrl);
+                const universalLink = `https://exp.host/--/to-exp/${encodedUrl}`;
+                
+                container.innerHTML = `
+                    <h3>iOS Universal Link</h3>
+                    <p><a href="${universalLink}" style="word-break: break-all;">${universalLink}</a></p>
+                `;
+                
+                log(`유니버설 링크 생성됨: ${universalLink}`, 'success');
+            } catch (error) {
+                container.innerHTML = `<p class="error">URL 파싱 에러: ${error.message}</p>`;
+                log(`유니버설 링크 생성 실패: ${error.message}`, 'error');
+            }
+        }
+        
+        // 네트워크 정보 표시
+        function displayNetworkInfo() {
+            const container = document.getElementById('network-info');
+            
+            const info = {
+                userAgent: navigator.userAgent,
+                online: navigator.onLine,
+                protocol: window.location.protocol,
+                host: window.location.host,
+                hostname: window.location.hostname,
+                port: window.location.port || '(default)',
+                path: window.location.pathname
+            };
+            
+            let html = '<table style="width: 100%; border-collapse: collapse;">';
+            for (const [key, value] of Object.entries(info)) {
+                html += `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px; font-weight: bold;">${key}</td>
+                        <td style="padding: 8px;">${value}</td>
+                    </tr>
+                `;
+            }
+            html += '</table>';
+            
+            container.innerHTML = html;
+        }
+        
+        // 이벤트 리스너 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            // 초기 서버 상태 확인
+            testServer();
+            
+            // 로그 초기화
+            log('디버그 도구 초기화됨', 'info');
+            
+            // 네트워크 정보 표시
+            displayNetworkInfo();
+            
+            // 버튼 이벤트 리스너
+            document.getElementById('test-api').addEventListener('click', testAPI);
+            document.getElementById('test-websocket').addEventListener('click', testWebSocket);
+            document.getElementById('clear-logs').addEventListener('click', function() {
+                document.getElementById('log-container').innerHTML = '';
+                log('로그 지워짐', 'info');
+            });
+            
+            // Expo 관련 버튼 이벤트 리스너
+            document.getElementById('generate-deep-link').addEventListener('click', generateDeepLink);
+            document.getElementById('generate-intent').addEventListener('click', generateIntentUrl);
+            document.getElementById('generate-universal').addEventListener('click', generateUniversalLink);
+        });
+    </script>
+</body>
+</html>

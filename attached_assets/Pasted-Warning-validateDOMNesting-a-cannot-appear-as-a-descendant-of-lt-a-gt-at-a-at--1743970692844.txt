@@ -1,0 +1,59 @@
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at a
+    at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=fd15777a:337:18
+    at div
+    at header
+    at div
+    at div
+    at AppLayout (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/layout/AppLayout.tsx:24:22)
+    at AppProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/contexts/AppContext.tsx:31:31)
+    at QueryClientProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=fd15777a:2805:3)
+    at App
+at a
+at a
+at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=fd15777a:337:18
+at div
+at header
+at div
+at div
+at AppLayout (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/layout/AppLayout.tsx:24:22)
+at AppProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/contexts/AppContext.tsx:31:31)
+at QueryClientProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=fd15777a:2805:3)
+at App
+at t.value (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Failed to fetch smartwatch connections: 
+TypeError {message: "Failed to execute 'fetch' on 'Window': '/api/users/1/smartwatch-connections' is not a valid HTTP…"}
+message: "Failed to execute 'fetch' on 'Window': '/api/users/1/smartwatch-connections' is not a valid HTTP method."
+stack: "TypeError: '/api/users/1/smartwatch-connections' is not a valid HTTP method.↵ at window.fetch (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)↵ at apiRequest (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/lib/queryClient.ts:9:21)↵ at fetchWatches (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/smartwatch/SmartWatchStatus.tsx:61:30)↵ at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/smartwatch/SmartWatchStatus.tsx:54:5↵ at commitHookEffectListMount (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:16915:34)↵ at commitPassiveMountOnFiber (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18156:19)↵ at commitPassiveMountEffects_complete (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18129:17)↵ at commitPassiveMountEffects_begin (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18119:15)↵ at commitPassiveMountEffects (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18109:11)↵ at flushPassiveEffectsImpl (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:19490:11)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Failed to execute 'fetch' on 'Window': '/api/users/1/smartwatch-connections' is not a valid HTTP method.
+at window.fetch (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+at apiRequest (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/lib/queryClient.ts:9:21)
+at fetchWatches (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/smartwatch/SmartWatchStatus.tsx:61:30)
+at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/smartwatch/SmartWatchStatus.tsx:54:5
+at commitHookEffectListMount (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:16915:34)
+at commitPassiveMountOnFiber (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18156:19)
+at commitPassiveMountEffects_complete (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18129:17)
+at commitPassiveMountEffects_begin (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18119:15)
+at commitPassiveMountEffects (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:18109:11)
+at flushPassiveEffectsImpl (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=fd15777a:19490:11)
+WebSocket connection established
+Failed to fetch smartwatch connections: 
+TypeError {message: "Failed to execute 'fetch' on 'Window': '/api/users/1/smartwatch-connections' is not a valid HTTP…"}
+
+Failed to execute 'fetch' on 'Window': '/api/users/1/smartwatch-connections' is not a valid HTTP method.
+Failed to fetch smartwatch connections: 
+TypeError {message: "Failed to execute 'fetch' on 'Window': '/api/users/1/smartwatch-connections' is not a valid HTTP…"}
+
+Failed to execute 'fetch' on 'Window': '/api/users/1/smartwatch-connections' is not a valid HTTP method.

@@ -1,0 +1,101 @@
+~/workspace$ ./start-expo-app.sh
+[1/3] 📁 Expo 앱 디렉토리로 이동 중...
+[2/3] 📦 필요한 패키지 설치 중... (약 2-3분 소요)
+⚠️  이 단계에서 오류가 발생해도 실제 실행에는 영향이 없을 수 있습니다.
+
+up to date, audited 1524 packages in 2s
+
+196 packages are looking for funding
+  run `npm fund` for details
+
+13 vulnerabilities (2 low, 11 high)
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+[2.5/3] 🔍 실행 중인 Expo 프로세스 확인 및 종료 중...
+[3/3] 🚀 Expo 웹 서버 시작 중... (포트: 4000)
+✅ 서버가 시작되면 다음 URL로 접속하세요:
+   https://expo-mobile-app-4000.repl.co
+⚠️  첫 실행 시 몇 분 정도 소요될 수 있습니다.
+Starting project at /home/runner/workspace/expo-mobile-app
+Starting Metro Bundler
+Starting Webpack on port 19006 in development mode.
+(node:1717) [DEP_WEBPACK_DEV_SERVER_CONSTRUCTOR] DeprecationWarning: Using 'compiler' as the first argument is deprecated. Please use 'options' as the first argument and 'compiler' as the second argument.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:1717) [DEP_WEBPACK_DEV_SERVER_LISTEN] DeprecationWarning: 'listen' is deprecated. Please use the async 'start' or 'startCallback' method.
+The following packages should be updated for best compatibility with the installed expo version:
+  react-native@0.73.4 - expected version: 0.73.6
+  react-native-maps@1.8.0 - expected version: 1.10.0
+Your project may not work correctly until you install the correct versions of the packages.
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█ ▄▄▄▄▄ █ ██▀▀ ▀▄██ ▄▄▄▄▄ █
+█ █   █ █  ▀█ ▀█ ██ █   █ █
+█ █▄▄▄█ █▀  █▄ ▀▄██ █▄▄▄█ █
+█▄▄▄▄▄▄▄█▄█ ▀▄█▄█ █▄▄▄▄▄▄▄█
+█ ▄█▀  ▄███▄█▄▀▄ ▄██ ▀▄▄ ▄█
+█▀▀▄▄█ ▄▀▄ ▄█▀██ ▀▀  ▄  ▀██
+█ ▄ ▀  ▄ ██▀▄▀▄ ▀▄▀▄▀▀▄ ▀██
+███ ▀▀▄▄▀▄ ▀ ▄ ▄▄▄ ██▄ ▀███
+█▄▄▄█▄▄▄█▀▀██▄ ▀▄ ▄▄▄ ▀ ▄▄█
+█ ▄▄▄▄▄ █▀▄▀█▀█▀▀ █▄█ ▀▀▀██
+█ █   █ █▄▄▀▄▀▄▄█▄▄ ▄▄▀   █
+█ █▄▄▄█ █▀▄█ ▄ ▄▄▄▄ ▀█▀▀ ██
+█▄▄▄▄▄▄▄█▄▄▄█▄▄█████▄▄▄▄▄▄█
+
+› Metro waiting on exp://127.0.0.1:4000
+› Scan the QR code above with Expo Go (Android) or the Camera app (iOS)
+
+› Web is waiting on http://localhost:19006
+
+› Using Expo Go
+› Press s │ switch to development build
+
+› Press a │ open Android
+› Press w │ open web
+
+› Press j │ open debugger
+› Press r │ reload app
+› Press m │ toggle menu
+› Press o │ open project code in your editor
+
+› Press ? │ show all commands
+
+Logs for your project will appear below. Press Ctrl+C to exit.
+WARNING in ./node_modules/@react-navigation/bottom-tabs/lib/module/views/ScreenFallback.js:16:12
+Module not found: Can't resolve 'react-native-screens'
+  14 |
+  15 | try {
+> 16 |   Screens = require('react-native-screens');
+     |            ^
+  17 | } catch (e) {
+  18 |   // Ignore
+  19 | }
+
+WARNING in ./node_modules/@react-navigation/stack/lib/module/views/Screens.js:7:12
+Module not found: Can't resolve 'react-native-screens'
+   5 |
+   6 | try {
+>  7 |   Screens = require('react-native-screens');
+     |            ^
+   8 | } catch (e) {
+   9 |   // Ignore
+  10 | }
+
+ERROR in ./node_modules/expo-modules-core/build/uuid/uuid.web.js:9:8
+Module not found: Can't resolve 'crypto'
+   7 |   const cryptoObject =
+   8 |     typeof crypto === 'undefined' || typeof crypto.randomUUID === 'undefined'
+>  9 |       ? require('crypto')
+     |        ^
+  10 |       : crypto;
+  11 |
+  12 |   if (!cryptoObject?.randomUUID) {
+
+ERROR in ENOENT: no such file or directory, open '/home/runner/workspace/expo-mobile-app/assets/favicon.png'
+
+web compiled with 2 errors and 2 warnings
+⠋ Stopping server(node:1717) [DEP_WEBPACK_DEV_SERVER_CLOSE] DeprecationWarning: 'close' is deprecated. Please use the async 'stop' or 'stopCallback' method.
+› Stopped server
+~/workspace$ 

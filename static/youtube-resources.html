@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare - 도움말 및 자료</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            max-width: 700px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #FF6D94;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .resource-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .resource-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #FF6D94;
+        }
+        
+        .resource-description {
+            margin-bottom: 15px;
+        }
+        
+        .resource-link {
+            display: inline-block;
+            background-color: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #333;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .resource-link:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 비율 */
+            height: 0;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .back-button {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+            margin: 20px auto 0;
+            text-align: center;
+            width: fit-content;
+        }
+        
+        .note {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .note-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .tab-button.active {
+            color: #FF6D94;
+            border-bottom: 2px solid #FF6D94;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 15px 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .steps {
+            text-align: left;
+            margin: 15px 0;
+        }
+        
+        .step {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            background-color: #FF6D94;
+            color: white;
+            border-radius: 50%;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HeartCare 도움말 및 자료</h1>
+        <p class="subtitle">아이폰 & Expo Go 연결 가이드</p>
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab('videosTab')">추천 동영상</button>
+            <button class="tab-button" onclick="openTab('tutorialsTab')">상세 가이드</button>
+            <button class="tab-button" onclick="openTab('commonIssuesTab')">자주 묻는 질문</button>
+        </div>
+        
+        <div id="videosTab" class="tab-content active">
+            <div class="resource-card">
+                <div class="resource-title">Expo Go 앱으로 프로젝트 실행하기</div>
+                <div class="resource-description">
+                    이 영상은 Expo Go 앱을 사용하여 React Native 프로젝트를 실행하는 방법을 보여줍니다. QR 코드 스캔 방법과 개발 서버 연결 방법을 자세히 설명합니다.
+                </div>
+                <div class="video-container">
+                    <iframe src="https://www.youtube.com/embed/pl2lJZ-yTX4" frameborder="0" allowfullscreen></iframe>
+                </div>
+                <a href="https://www.youtube.com/watch?v=pl2lJZ-yTX4" class="resource-link" target="_blank">YouTube에서 보기</a>
+            </div>
+            
+            <div class="resource-card">
+                <div class="resource-title">Apple Watch와 아이폰 연동하기</div>
+                <div class="resource-description">
+                    Apple Watch와 아이폰을 연동하여 건강 데이터를 공유하는 방법을 설명합니다. 심박수와 ECG 데이터를 앱으로 전송하는 과정을 자세히 보여줍니다.
+                </div>
+                <div class="video-container">
+                    <iframe src="https://www.youtube.com/embed/TbzWYZQCEaA" frameborder="0" allowfullscreen></iframe>
+                </div>
+                <a href="https://www.youtube.com/watch?v=TbzWYZQCEaA" class="resource-link" target="_blank">YouTube에서 보기</a>
+            </div>
+        </div>
+        
+        <div id="tutorialsTab" class="tab-content">
+            <div class="resource-card">
+                <div class="resource-title">개발 빌드 URL로 Expo Go 앱 접속하기</div>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">아이폰에서 App Store를 통해 <strong>Expo Go</strong> 앱을 설치합니다.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">Expo Go 앱을 실행합니다.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            스크린 하단에 있는 <strong>프로필</strong> 탭을 탭합니다.
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <strong>URL로 열기</strong> 버튼을 탭합니다.
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            다음 URL을 입력합니다:<br>
+                            <code>exp://u.expo.dev/d58c2cd2-f677-439a-b084-9a1c9eb51ebe</code>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <strong>열기</strong> 버튼을 탭하여 HeartCare 앱을 실행합니다.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="resource-card">
+                <div class="resource-title">Apple Watch 건강 데이터 접근 허용하기</div>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">아이폰에서 <strong>설정</strong> 앱을 엽니다.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content"><strong>개인 정보 보호</strong>를 탭합니다.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content"><strong>건강</strong>을 탭합니다.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <strong>Expo Go</strong> 앱에 대한 접근 권한을 허용하면, HeartCare 앱이 Apple Watch의 심박수와 ECG 데이터에 접근할 수 있습니다.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="note">
+                <span class="note-title">📝 참고사항</span>
+                <p>아이폰과 Apple Watch가 반드시 동일한 Apple ID로 로그인되어 있어야 합니다. 또한 두 기기가 서로 가까이 있어야 데이터가 정상적으로 전송됩니다.</p>
+            </div>
+        </div>
+        
+        <div id="commonIssuesTab" class="tab-content">
+            <div class="resource-card">
+                <div class="resource-title">QR 코드 스캔이 작동하지 않을 때</div>
+                <div class="resource-description">
+                    <strong>해결 방법:</strong>
+                    <ul>
+                        <li>URL 직접 입력 방식으로 시도해보세요.</li>
+                        <li>카메라 앱 대신 Expo Go 앱 내부의 QR 코드 스캐너를 사용하세요.</li>
+                        <li>아이폰의 인터넷 연결이 안정적인지 확인하세요.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="resource-card">
+                <div class="resource-title">Expo Go 앱에서 "프로젝트를 찾을 수 없음" 오류</div>
+                <div class="resource-description">
+                    <strong>해결 방법:</strong>
+                    <ul>
+                        <li>URL이 정확하게 입력되었는지 확인하세요.</li>
+                        <li>아이폰의 Expo Go 앱을 최신 버전으로 업데이트하세요.</li>
+                        <li>다른 네트워크(예: 와이파이 대신 셀룰러 데이터)를 사용해보세요.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="resource-card">
+                <div class="resource-title">Apple Watch 데이터가 표시되지 않는 경우</div>
+                <div class="resource-description">
+                    <strong>해결 방법:</strong>
+                    <ul>
+                        <li>Apple Watch가 아이폰과 올바르게 페어링되었는지 확인하세요.</li>
+                        <li>아이폰의 건강 앱에서 데이터 공유 권한을 확인하세요.</li>
+                        <li>Apple Watch와 아이폰 모두 최신 소프트웨어로 업데이트되었는지 확인하세요.</li>
+                        <li>Bluetooth가 켜져 있는지 확인하세요.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <a href="/" class="back-button">메인 페이지로 돌아가기</a>
+    </div>
+    
+    <script>
+        function openTab(tabName) {
+            // 모든 탭 콘텐츠 숨기기
+            const tabcontents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontents.length; i++) {
+                tabcontents[i].classList.remove("active");
+            }
+            
+            // 모든 탭 버튼 비활성화
+            const tabbuttons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].classList.remove("active");
+            }
+            
+            // 선택한 탭 표시 및 버튼 활성화
+            document.getElementById(tabName).classList.add("active");
+            event.currentTarget.classList.add("active");
+        }
+    </script>
+</body>
+</html>

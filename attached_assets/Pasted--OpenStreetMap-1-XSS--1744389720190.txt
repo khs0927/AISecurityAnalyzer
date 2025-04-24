@@ -1,0 +1,141 @@
+제공하신 `OpenStreetMap` 컴포넌트 코드를 검토한 결과, 다음과 같은 개선 사항과 주의점을 제안드립니다:
+
+### 1. **보안 취약점 개선**
+- **XSS 방지**: 병원 이름/주소에 HTML 특수문자(``, `"` 등)가 포함될 경우 문제가 발생할 수 있습니다. `escapeHtml` 함수 추가 권장:
+  ```typescript
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(//g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+  ```
+  사용 예: `${escapeHtml(hospital.name)}`
+
+### 2. **성능 최적화**
+- **메모이제이션 적용**: `generateMapHTML` 함수에 `useMemo` 훅 사용 권장
+  ```typescript
+  const mapHtml = useMemo(() => generateMapHTML(), [hospitals, initialLocation, zoomLevel]);
+  ```
+
+### 3. **웹뷰 상호작용 개선**
+- **터치 이벤트 처리**: 웹뷰가 터치 이벤트를 가로채지 않도록 설정 추가
+  ```jsx
+  
+  ```
+
+### 4. **동적 데이터 업데이트**
+- **병원 데이터 변경 감지**: `onMessage` 핸들러 추가로 웹뷰와의 양방향 통신 구현
+  ```typescript
+  const handleWebViewMessage = (event: WebViewMessageEvent) => {
+    const { type, data } = JSON.parse(event.nativeEvent.data);
+    // 이벤트 처리 로직
+  };
+  ```
+
+### 5. **UI/UX 개선사항**
+```typescript
+// 1. 마커 클러스터링 추가 (의존성 설치 필요)
+npm install leaflet.markercluster
+
+// 2. 지도 로딩 상태 표시
+const [isLoading, setIsLoading] = useState(true);
+
+// 3. 오프라인 지원을 위한 타일 캐싱
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  crossOrigin: true,
+  reuseTiles: true,
+  ...
+})
+```
+
+### 6. **타입스크립트 개선**
+```typescript
+// Hospital 인터페이스 확장
+interface Hospital {
+  ...
+  emergency: boolean;
+  nightService: boolean;
+}
+
+// 지도 이벤트 타입 정의
+type MapEvent = 
+  | { type: 'markerClick'; hospitalId: number }
+  | { type: 'mapMove'; center: [number, number] };
+```
+
+### 7. **완성된 개선 코드 예시**
+```typescript
+const OpenStreetMap = ({...}: OpenStreetMapProps) => {
+  const webViewRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  const handleMessage = (event: WebViewMessageEvent) => {
+    const message = JSON.parse(event.nativeEvent.data);
+    switch(message.type) {
+      case 'mapClick':
+        console.log('Map clicked at:', message.coords);
+        break;
+      case 'markerClick':
+        console.log('Marker clicked:', message.hospitalId);
+        break;
+    }
+  };
+
+  const updateMapCenter = useCallback((coords: [number, number]) => {
+    webViewRef.current?.postMessage(
+      JSON.stringify({ type: 'setCenter', coords })
+    );
+  }, []);
+
+  return (
+     setMapReady(true)}
+      ...
+    />
+  );
+};
+```
+
+### 8. **추가 고려사항**
+1. **반응형 디자인**: CSS 미디어 쿼리 추가
+   ```css
+   @media (max-width: 480px) {
+     .popup-container { width: 150px; }
+   }
+   ```
+2. **접근성**: ARIA 속성 추가
+   ```html
+   
+     ...
+   
+   ```
+3. **오프라인 지원**: Service Worker를 이용한 타일 캐싱
+4. **성능 모니터링**: WebView 메모리 사용량 체크
+
+이 코드는 기본적인 기능 구현에는 문제가 없으나, 실제 프로덕션 환경에서는 위에서 언급한 보안 및 성능 개선 사항을 반드시 적용해야 합니다. 특히 의료기관 정보와 같은 민감한 데이터를 다루므로 XSS 방지 조치는 필수적으로 구현해야 합니다.
+
+Citations:
+[1] https://github.com/pavel-corsaghin/react-native-leaflet
+[2] https://www.npmjs.com/package/@vgatica9%2Freact-native-leaflet-maps
+[3] https://github.com/ms-aija/LeafletReact5minDemo
+[4] https://github.com/reggie3/react-native-webview-leaflet
+[5] https://www.dhiwise.com/post/exploring-the-key-features-of-react-leaflet-for-mapping
+[6] https://www.npmjs.com/package/@netizen-teknologi/react-native-maps-leaflet
+[7] https://www.npmjs.com/package/react-native-webview-leaflet/v/4.2.13
+[8] https://stackoverflow.com/questions/42835692/react-leaflet-add-markers-dynamically
+[9] https://leafletjs.com
+[10] https://docs.expo.dev/versions/latest/sdk/webview/
+[11] https://github.com/pavel-corsaghin/react-native-leaflet/issues/25
+[12] https://github.com/weishenho/react-native-leaflet-map
+[13] https://stackoverflow.com/questions/59756846/how-to-use-react-native-webview-leaflet
+[14] https://react-leaflet.js.org
+[15] https://react-leaflet.js.org/docs/v4/api-map/
+[16] https://www.npmjs.com/package/@the-ksquare-group/react-native-webview-leaflet
+[17] https://www.npmjs.com/package/react-native-leaflet-view/v/0.1.0
+[18] https://stackoverflow.com/questions/65394203/leaflet-react-get-map-instance-in-functional-component
+[19] https://www.jsdelivr.com/package/npm/react-native-webview-leaflet
+[20] https://react-leaflet.js.org/docs/example-popup-marker/
+
+---
+Perplexity로부터의 답변: pplx.ai/share

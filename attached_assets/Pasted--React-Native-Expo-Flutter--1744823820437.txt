@@ -1,0 +1,404 @@
+아래 예시는 **React Native** 기반의 예시 코드이며, Expo 환경에서 구동한다는 가정 하에 작성되었습니다.  
+(원하시는 프레임워크/라이브러리(Flutter, 웹 React, Vue 등)에 맞추어 수정하셔도 됩니다.)
+
+- **프로토타입** 수준으로 전체 흐름과 화면 구성을 보여주기 위한 예시입니다.  
+- 실제 스마트워치 연동(HealthKit, Google Fit, Samsung Health, 또는 제조사별 SDK 등) 로직은 환경에 따라 달라질 수 있으므로, 샘플 함수(`fetchWatchData`)로 대체하여 구조만 보여드립니다.  
+- ECG(심전도) 그래프는 일반적인 라인 차트(LineChart) 형태로 예시 구현했습니다. 필요 시 더 정교한 ECG 표현을 위해 사용자 정의 컴포넌트나 SVG 등을 사용하시면 됩니다.
+
+---
+
+## 설치해야 할 주요 라이브러리
+
+1. **react-navigation** / **@react-navigation/native-stack**  
+   \- 화면 간 내비게이션을 위한 라이브러리  
+2. **react-native-chart-kit**  
+   \- 간단한 차트를 구현하기 용이한 라이브러리 (LineChart, BarChart, ProgressChart 등)  
+3. **react-native-svg**  
+   \- 차트 내부 구현에 SVG가 활용되어, `react-native-chart-kit`를 함께 쓰려면 필요
+
+```bash
+expo install react-native-svg
+npm install @react-navigation/native @react-navigation/native-stack
+npm install react-native-chart-kit
+```
+
+---
+
+## 전체 코드 예시
+
+아래 코드는 하나의 파일에 모두 담았지만, 실제로는 `App.js`, `navigation/StackNavigator.js`, `screens/` 디렉토리, `components/` 디렉토리 등으로 분리하는 것을 권장합니다. 여기서는 이해를 돕기 위해 단일 코드로 예시를 보여드립니다.
+
+```jsx
+// App.js
+import React, { useEffect, useState } from 'react';
+import { 
+  View, 
+  Text, 
+  Button, 
+  StyleSheet, 
+  SafeAreaView, 
+  ScrollView,
+  Dimensions 
+} from 'react-native';
+
+// react-navigation 관련
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+// 차트 관련
+import { 
+  LineChart, 
+  BarChart, 
+  ProgressChart 
+} from 'react-native-chart-kit';
+
+// 화면 크기 받아오기
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// 네이티브 스택 네비게이터 생성
+const Stack = createNativeStackNavigator();
+
+/**
+ * 스마트워치에서 데이터를 가져온다고 가정하는 샘플 함수
+ * 실제로는 제조사 SDK 또는 HealthKit/Google Fit 등과 연동해야 합니다.
+ */
+async function fetchWatchData() {
+  // 스마트 워치에서 심박수, ECG, 기타 데이터를 가져왔다고 가정
+  // 실제 구현에서는 비동기로 SDK 호출, API 호출 등을 사용
+  return {
+    heartRate: 72,
+    ecgData: [70, 75, 72, 77, 80, 78, 76, 74, 73, 72], 
+    steps: 4321,
+    calories: 250,
+    weight: 56.5,
+    hrMax: 140,
+    hrRest: 60,
+    activityProgress: 0.7, // 70% 달성
+  };
+}
+
+/**
+ * 메인 화면 (Dashboard)
+ * 오늘의 심박수, 걸음 수, 칼로리, 무게 등 요약 정보 표시
+ */
+function DashboardScreen({ navigation }) {
+  const [watchData, setWatchData] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const data = await fetchWatchData();
+      setWatchData(data);
+    })();
+  }, []);
+
+  if (!watchData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>스마트워치 데이터를 가져오는 중...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const { heartRate, steps, calories, weight } = watchData;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>오늘의 요약</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>심박수(BPM)</Text>
+        <Text style={styles.value}>{heartRate} bpm</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>걸음 수</Text>
+        <Text style={styles.value}>{steps} steps</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>칼로리</Text>
+        <Text style={styles.value}>{calories} kcal</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>현재 체중</Text>
+        <Text style={styles.value}>{weight} kg</Text>
+      </View>
+
+      <Button
+        title="ECG(심전도) 그래프 보기"
+        onPress={() => navigation.navigate('ECGScreen')}
+      />
+
+      <View style={{ marginTop: 10 }} />
+
+      <Button
+        title="활동 상태 상세"
+        onPress={() => navigation.navigate('ActivityStatus')}
+      />
+
+      <View style={{ marginTop: 10 }} />
+
+      <Button
+        title="체중 변화 그래프"
+        onPress={() => navigation.navigate('Weight')}
+      />
+    </SafeAreaView>
+  );
+}
+
+/**
+ * ECG(심전도) 화면
+ * 라인 차트로 간단히 심전도 형상을 표현
+ */
+function ECGScreen() {
+  const [ecgData, setEcgData] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      const data = await fetchWatchData();
+      // ecgData는 10개 정도로 간단히 가정
+      setEcgData(data.ecgData);
+    })();
+  }, []);
+
+  if (ecgData.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>ECG 데이터를 불러오는 중...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>ECG(심전도) 데이터</Text>
+      <LineChart
+        data={{
+          labels: ecgData.map((_, idx) => idx + 1),
+          datasets: [
+            {
+              data: ecgData,
+              color: () => '#FF6B6B', // 라인 색상
+            },
+          ],
+        }}
+        width={SCREEN_WIDTH * 0.9}
+        height={220}
+        chartConfig={{
+          backgroundColor: '#ffcccc',
+          backgroundGradientFrom: '#ffcccc',
+          backgroundGradientTo: '#ffe6e6',
+          decimalPlaces: 1,
+          color: () => '#FF6B6B',
+          labelColor: () => '#333',
+        }}
+        bezier
+        style={{
+          marginVertical: 20,
+          borderRadius: 8,
+        }}
+      />
+      <Text style={{ fontSize: 14, textAlign: 'center' }}>
+        ※ 실제 ECG 그래프는 샘플이며, 의료진단용이 아님
+      </Text>
+    </SafeAreaView>
+  );
+}
+
+/**
+ * 활동 상태 화면
+ * 심박수 최대/최소, 활동 진행률(ProgressChart), 기타 운동 상태 등을 표시
+ */
+function ActivityStatusScreen() {
+  const [watchData, setWatchData] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const data = await fetchWatchData();
+      setWatchData(data);
+    })();
+  }, []);
+
+  if (!watchData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>활동 데이터를 불러오는 중...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const { hrMax, hrRest, activityProgress } = watchData;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>활동 상태</Text>
+      <View style={styles.card}>
+        <Text style={styles.label}>최대 심박수</Text>
+        <Text style={styles.value}>{hrMax} bpm</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>안정시 심박수</Text>
+        <Text style={styles.value}>{hrRest} bpm</Text>
+      </View>
+
+      <Text style={{ marginVertical: 10, fontSize: 16, fontWeight: '600' }}>
+        오늘의 활동 달성도
+      </Text>
+      <ProgressChart
+        data={{
+          labels: ['Goal'], 
+          data: [activityProgress], 
+        }}
+        width={SCREEN_WIDTH * 0.9}
+        height={160}
+        strokeWidth={8}
+        radius={32}
+        chartConfig={{
+          backgroundColor: '#ffffff',
+          backgroundGradientFrom: '#ffffff',
+          backgroundGradientTo: '#ffffff',
+          color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
+          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+        }}
+        hideLegend={false}
+        style={{ marginVertical: 20 }}
+      />
+      <Text>목표의 {(activityProgress * 100).toFixed(0)}% 달성</Text>
+    </SafeAreaView>
+  );
+}
+
+/**
+ * 체중 변화 그래프 화면
+ * 가상의 주차별 체중 변화를 예시로 BarChart로 표현
+ */
+function WeightScreen() {
+  const [weightData, setWeightData] = useState([]);
+
+  useEffect(() => {
+    // 여기서는 샘플로 주차별 체중 데이터
+    const sampleWeightData = [57.0, 56.8, 56.2, 56.5, 55.9];
+    setWeightData(sampleWeightData);
+  }, []);
+
+  if (weightData.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>체중 데이터를 불러오는 중...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>체중 변화</Text>
+      <BarChart
+        data={{
+          labels: ['W1', 'W2', 'W3', 'W4', 'W5'],
+          datasets: [
+            {
+              data: weightData,
+            },
+          ],
+        }}
+        width={SCREEN_WIDTH * 0.9}
+        height={220}
+        chartConfig={{
+          backgroundColor: '#ffe6e6',
+          backgroundGradientFrom: '#ffe6e6',
+          backgroundGradientTo: '#ffffff',
+          decimalPlaces: 1,
+          color: () => '#FF6B6B',
+          labelColor: () => '#333',
+        }}
+        showValuesOnTopOfBars
+        style={{
+          marginVertical: 20,
+          borderRadius: 8,
+        }}
+      />
+      <Text style={{ fontSize: 14, textAlign: 'center' }}>
+        (주차별로 샘플 체중을 표시한 예시입니다)
+      </Text>
+    </SafeAreaView>
+  );
+}
+
+/**
+ * 앱의 메인 엔트리 포인트
+ */
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Dashboard">
+        <Stack.Screen 
+          name="Dashboard" 
+          component={DashboardScreen} 
+          options={{ title: '홈 (대시보드)' }} 
+        />
+        <Stack.Screen 
+          name="ECGScreen" 
+          component={ECGScreen} 
+          options={{ title: 'ECG(심전도)' }} 
+        />
+        <Stack.Screen 
+          name="ActivityStatus" 
+          component={ActivityStatusScreen} 
+          options={{ title: '활동 상태' }} 
+        />
+        <Stack.Screen 
+          name="Weight" 
+          component={WeightScreen} 
+          options={{ title: '체중 변화' }} 
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+// 스타일 정의
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  title: {
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    marginBottom: 20,
+  },
+  card: {
+    width: '90%',
+    backgroundColor: '#ffe6e6',
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 5,
+  },
+  label: {
+    fontSize: 14,
+    color: '#666',
+  },
+  value: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ff6b6b',
+  },
+});
+```
+
+---
+
+### 요약
+
+1. **DashboardScreen**: 오늘의 심박수, 걸음 수, 칼로리, 체중 등 핵심 지표를 표시하고, 다른 화면으로 이동할 수 있는 버튼들을 배치했습니다.  
+2. **ECGScreen**: `LineChart`를 이용해 ECG(심전도) 데이터를 라인 그래프로 표시합니다.  
+3. **ActivityStatusScreen**: 최대/안정시 심박수 등 간단한 활동 정보를 표시하고, `ProgressChart`를 이용하여 목표 달성률을 표현합니다.  
+4. **WeightScreen**: 주차별 체중 데이터를 `BarChart`를 통해 시각화합니다.  
+
+> 상기 예시는 **프로토타입** 형태이며, 실제 상용 서비스에서는 디자인/애니메이션/데이터 연동(스마트워치 SDK, DB연동 등) 부분을 강화해야 합니다. 또한 ECG 특유의 파형(심전도 파형)을 좀 더 정교하게 표현하기 위해서는 커스텀 차트나 다양한 애니메이션(SVG Path 애니메이션 등)을 고려하시면 좋습니다.
+
+원하시는 **색상 테마**나 **UI 컴포넌트(React Native Paper, NativeBase, etc.)**를 적용하실 수도 있고, **Flutter**나 **웹**(React/Vue/Angular)으로 변환도 가능합니다. 필요 시 해당 방향으로 수정해 활용하시면 됩니다.

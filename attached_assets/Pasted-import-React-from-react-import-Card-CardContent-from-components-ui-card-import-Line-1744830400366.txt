@@ -1,0 +1,195 @@
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Heart, Star, Leaf } from 'lucide-react';
+
+// Sample data
+const circularMetrics = [65, 75, 51];
+const histogramData = [
+  { name: 'Jan', value: 2356 },
+  { name: 'Feb', value: 4372 },
+  { name: 'Mar', value: 1786 },
+];
+const summaryCards = [
+  { icon: <Heart />, value: 76, label: 'Likes' },
+  { icon: <Star />, value: 54, label: 'Stars' },
+  { icon: <Leaf />, value: 23, label: 'Leaves' },
+];
+const areaData1 = [
+  { time: 10, value: 20 },{ time: 11, value: 40 },{ time: 12, value: 60 },{ time: 1, value: 90 },{ time: 2, value: 80 },{ time: 3, value: 70 },{ time: 4, value: 50 },{ time: 5, value: 30 },{ time: 6, value: 20 },{ time: 7, value: 10 },
+];
+const areaData2 = [
+  { time: 10, value: 15 },{ time: 11, value: 30 },{ time: 12, value: 45 },{ time: 1, value: 56 },{ time: 2, value: 50 },{ time: 3, value: 40 },{ time: 4, value: 30 },{ time: 5, value: 20 },{ time: 6, value: 15 },{ time: 7, value: 10 },
+];
+const multiLineData = [
+  { name: '01', seriesA: 30, seriesB: 20 },{ name: '02', seriesA: 44, seriesB: 37 },{ name: '03', seriesA: 54, seriesB: 52 },{ name: '04', seriesA: 47, seriesB: 40 },
+  { name: '05', seriesA: 61, seriesB: 55 },{ name: '06', seriesA: 52, seriesB: 45 },{ name: '07', seriesA: 85, seriesB: 82 },{ name: '08', seriesA: 73, seriesB: 68 },{ name: '09', seriesA: 68, seriesB: 62 },
+];
+const gaugeValue = 368;
+const horizontalBars = [ { name: 'Metric A', value: 43030 }, { name: 'Metric B', value: 56456 }, { name: 'Metric C', value: 51643 } ];
+const barComparison = [ { name: 'Category 1', a: 95, b: 102 }, { name: 'Category 2', a: 88, b: 120 } ];
+
+export default function Dashboard() {
+  return (
+    <div className="p-6 space-y-6">
+      {/* Top metrics row */}
+      <div className="grid grid-cols-4 gap-6">
+        {circularMetrics.map((pct, idx) => (
+          <Card key={idx} className="p-4">
+            <CardContent className="flex justify-center items-center">
+              <div className="relative">
+                <svg width={100} height={100}>
+                  <circle cx={50} cy={50} r={45} stroke="#FEE2E2" strokeWidth={10} fill="none" />
+                  <circle
+                    cx={50}
+                    cy={50}
+                    r={45}
+                    stroke="red"
+                    strokeWidth={10}
+                    fill="none"
+                    strokeDasharray={`${(pct / 100) * (2 * Math.PI * 45)} ${2 * Math.PI * 45}`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 50 50)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-red-600">{pct}%</div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        <Card className="col-span-2 p-4">
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600 mb-4">$10,452</div>
+            <ResponsiveContainer width="100%" height={60}>
+              <BarChart data={histogramData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <Bar dataKey="value" fill="red" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Small summary cards */}
+      <div className="grid grid-cols-6 gap-6">
+        {summaryCards.map((item, i) => (
+          <Card key={i} className="p-4 flex items-center">
+            <item.icon className="w-6 h-6 text-red-600" />
+            <div className="ml-3">
+              <div className="text-xl font-semibold text-red-600">{item.value}</div>
+              <div className="text-sm text-gray-500">{item.label}</div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Area charts */}
+      <div className="grid grid-cols-2 gap-6">
+        <Card className="p-4">
+          <CardContent>
+            <div className="text-sm text-gray-500 mb-2 uppercase">Primistratian Ani Ferri</div>
+            <ResponsiveContainer width="100%" height={150}>
+              <AreaChart data={areaData1} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="red" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="red" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="value" stroke="red" fill="url(#grad1)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="p-4">
+          <CardContent>
+            <div className="text-sm text-gray-500 mb-2 uppercase">Tatos Duo Duis</div>
+            <ResponsiveContainer width="100%" height={150}>
+              <AreaChart data={areaData2} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="grad2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="red" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="red" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="value" stroke="red" fill="url(#grad2)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Multi-line chart with tabs */}
+      <Card className="p-4">
+        <CardContent>
+          <div className="flex space-x-4 mb-4">
+            <button className="px-4 py-1 rounded-full border border-red-600 text-red-600">Aperirian</button>
+            <button className="px-4 py-1 rounded-full bg-red-600 text-white">Deserunt</button>
+            <button className="px-4 py-1 rounded-full border border-red-600 text-red-600">Ocurreret</button>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={multiLineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+              <Line type="monotone" dataKey="seriesA" stroke="red" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="seriesB" stroke="darkred" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Bottom row */}
+      <div className="grid grid-cols-4 gap-6">
+        {/* Gauge */}
+        <Card className="p-4 flex items-center justify-center">
+          <div className="relative w-32 h-32">
+            <svg viewBox="0 0 36 36" className="w-full h-full">
+              <path
+                className="text-gray-200"
+                d="M18 2.0845
+                   a 15.9155 15.9155 0 0 1 0 31.831
+                   a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                strokeWidth="2"
+              />
+              <path
+                className="text-red-600"
+                d="M18 2.0845
+                   a 15.9155 15.9155 0 0 1 0 31.831"
+                fill="none"
+                strokeWidth="2"
+                strokeDasharray={`${(gaugeValue / 1000) * 100} 100`}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-red-600">{gaugeValue}</div>
+          </div>
+        </Card>
+        {/* Horizontal bars */}
+        <Card className="p-4">
+          <CardContent>
+            {horizontalBars.map((item, i) => (
+              <div key={i} className="flex items-center mb-2">
+                <div className="w-24 text-sm text-gray-600">{item.name}</div>
+                <div className="flex-1 h-2 bg-red-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-600" style={{ width: `${(item.value / 60000) * 100}%` }} />
+                </div>
+                <div className="ml-3 text-sm font-semibold text-red-600">{item.value}</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        {/* Bar comparison */}
+        <Card className="col-span-2 p-4">
+          <CardContent>
+            <ResponsiveContainer width="100%" height={100}>
+              <BarChart data={barComparison} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} />
+                <Bar dataKey="a" fill="red" barSize={10} />
+                <Bar dataKey="b" fill="darkred" barSize={10} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

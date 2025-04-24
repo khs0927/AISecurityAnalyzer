@@ -1,0 +1,310 @@
+아래는 주요 변경 사항을 반영해 리팩터링한 server/ai.ts 전체입니다.
+	•	Hugging Face 모델 ID 를 실제 존재하는 리포지토리로 수정
+	•	QWEN2.5‑Omni‑7B → Qwen/Qwen2.5-Omni-7B
+	•	MMed‑Llama3‑8B‑EnIns → Henrychur/MMed-Llama-3-8B-EnIns
+	•	환경 변수 는 .env 에 정의한 HUGGINGFACE_TOKEN, PUBMED_API_KEY, OPENAI_API_KEY 만 사용
+	•	공통 함수 invokeHuggingFaceModel 으로 중복 제거
+	•	fetch 는 Node 18+ 내장 fetch 를, 구버전 Node 환경에선 npm install node-fetch 후 상단에 import fetch from 'node-fetch'; 추가
+	•	에러 핸들링 과 로그 를 개선
+
+import OpenAI from "openai";
+import { Request, Response, Router } from "express";
+// import fetch from "node-fetch"; // 구버전 Node인 경우 주석 해제
+
+const router = Router();
+
+// ──────────────────────────────────────────────────────────────
+// 환경 변수 로드 및 검증
+// ──────────────────────────────────────────────────────────────
+const PUBMED_API_KEY = process.env.PUBMED_API_KEY || "";
+const HUGGINGFACE_TOKEN = process.env.HUGGINGFACE_TOKEN || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+
+if (!PUBMED_API_KEY) {
+  console.error("⚠️ PUBMED_API_KEY가 없습니다. PubMed 검색이 제한됩니다.");
+} else {
+  console.log("✅ PubMed API 키 설정 완료");
+}
+
+if (!HUGGINGFACE_TOKEN) {
+  console.error("⚠️ HUGGINGFACE_TOKEN이 없습니다. Hugging Face 호출이 제한됩니다.");
+} else {
+  console.log("✅ Hugging Face API 토큰 설정 완료");
+}
+
+if (!OPENAI_API_KEY && !HUGGINGFACE_TOKEN) {
+  console.error("⚠️ OPENAI_API_KEY 또는 HUGGINGFACE_TOKEN이 없습니다. AI 기능이 제한됩니다.");
+}
+
+// OpenAI 클라이언트 (폴백용)
+const openai = OPENAI_API_KEY
+  ? new OpenAI({ apiKey: OPENAI_API_KEY })
+  : null;
+
+// ──────────────────────────────────────────────────────────────
+// 시스템 프롬프트 (의료 전문가 역할)
+// ──────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `
+당신은 심장 질환 전문 AI 의사 'HAIM-MIMIC-MM' 입니다.
+... (생략, 기존 SYSTEM_PROMPT 내용 그대로 사용) ...
+`;
+
+// ──────────────────────────────────────────────────────────────
+// PubMed 검색 함수
+// ──────────────────────────────────────────────────────────────
+async function searchPubMed(query: string, maxResults: number = 3): Promise<any[]> {
+  try {
+    const encoded = encodeURIComponent(query);
+    const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encoded}&retmode=json&retmax=${maxResults}&api_key=${PUBMED_API_KEY}`;
+    const sr = await fetch(searchUrl);
+    const sd = await sr.json();
+    const ids: string[] = sd.esearchresult?.idlist || [];
+    if (ids.length === 0) return [];
+
+    const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(
+      ","
+    )}&retmode=json&api_key=${PUBMED_API_KEY}`;
+    const smr = await fetch(summaryUrl);
+    const smd = await smr.json();
+    const results = smd.result || {};
+
+    return ids.map((id) => {
+      const art = results[id] || {};
+      return {
+        id,
+        title: art.title,
+        authors: (art.authors || []).map((a: any) => a.name).join(", "),
+        journal: art.fulljournalname || art.source,
+        pubDate: art.pubdate,
+        url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+      };
+    });
+  } catch (e) {
+    console.error("PubMed 검색 오류:", e);
+    return [];
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Hugging Face 모델 공통 호출 함수
+// ──────────────────────────────────────────────────────────────
+async function invokeHuggingFaceModel(
+  modelId: string,
+  inputs: string,
+  parameters: Record<string, any> = {}
+): Promise<any> {
+  const res = await fetch(`https://api-inference.huggingface.co/models/${modelId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${HUGGINGFACE_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ inputs, parameters }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HF 오류: ${res.status} ${res.statusText} - ${text}`);
+  }
+  return res.json();
+}
+
+// ──────────────────────────────────────────────────────────────
+// 1) /chat : 자유 대화 + PubMed 강화
+// ──────────────────────────────────────────────────────────────
+router.post("/chat", async (req: Request, res: Response) => {
+  try {
+    const { userId, message, context = "[]", healthData } = req.body;
+    if (!userId || !message) {
+      return res.status(400).json({ error: "userId와 message가 필요합니다." });
+    }
+
+    // 1) 기존 대화 컨텍스트 로드
+    let dialogs: any[] = [];
+    try { dialogs = JSON.parse(context); } catch { dialogs = []; }
+
+    // 2) PubMed 검색
+    const pubmed = await searchPubMed(`${message} heart cardiac`);
+
+    // 3) 사용자 메시지 + 컨텍스트 + 건강 데이터 + PubMed 결과로 프롬프트 구성
+    let enriched = message;
+    if (healthData) {
+      enriched += `\n\n건강 데이터:\n- 심박수: ${healthData.heartRate || "N/A"}\n- 산소포화도: ${healthData.oxygenLevel || "N/A"}`;
+    }
+    if (pubmed.length) {
+      enriched += "\n\n관련 논문:\n" + pubmed.map((p, i) => `${i + 1}. ${p.title} (${p.url})`).join("\n");
+    }
+
+    // 4) HF 호출
+    let aiText: string;
+    try {
+      const prompt = [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...dialogs.map((d) => ({
+          role: d.sender === "user" ? "user" : "assistant",
+          content: d.content,
+        })),
+        { role: "user", content: enriched },
+      ]
+        .map((m) => `${m.role === "user" ? "사용자" : "AI"}: ${m.content}`)
+        .join("\n\n");
+
+      const hfOut = await invokeHuggingFaceModel(
+        "Qwen/Qwen2.5-Omni-7B",
+        prompt,
+        { max_new_tokens: 512, temperature: 0.4 }
+      );
+
+      // HF 응답 형태에 따라 다르게 처리
+      aiText =
+        Array.isArray(hfOut) && hfOut[0].generated_text
+          ? hfOut[0].generated_text
+          : hfOut.generated_text || "응답을 생성할 수 없습니다.";
+    } catch (hfErr) {
+      console.error("HuggingFace 오류:", hfErr);
+
+      // 5) 폴백: OpenAI GPT
+      if (openai) {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: enriched },
+          ],
+          temperature: 0.4,
+          max_tokens: 512,
+        });
+        aiText = completion.choices[0].message.content!;
+      } else {
+        aiText = "죄송합니다. AI 모델을 호출할 수 없습니다.";
+      }
+    }
+
+    // 6) PubMed 레퍼런스까지 합쳐서 반환
+    return res.json({
+      aiResponse: aiText.trim(),
+      pubmedReferences: pubmed,
+    });
+  } catch (err: any) {
+    console.error("/chat 오류:", err);
+    return res.status(500).json({ error: err.message || "알 수 없는 오류" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// 2) /v1/analyze : JSON 포맷 진단 리턴
+// ──────────────────────────────────────────────────────────────
+router.post("/v1/analyze", async (req: Request, res: Response) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "text가 필요합니다." });
+
+    const pubmed = await searchPubMed(text);
+
+    const analysisPrompt = `
+다음 질문에 대해 JSON 형태로 응답해주세요:
+질문: "${text}"
+결과 형식:
+{
+  "diagnosis": "...",
+  "risk": { "score": 0-100, "level": "낮음/중간/높음", "confidence": 0.0-1.0 },
+  "recommendations": ["...", "..."]
+}
+`;
+
+    // HF 호출
+    const hfInput = SYSTEM_PROMPT + "\n\n" + analysisPrompt;
+    const hfOut = await invokeHuggingFaceModel(
+      "Qwen/Qwen2.5-Omni-7B",
+      hfInput,
+      { max_new_tokens: 512, temperature: 0.3 }
+    );
+
+    const generated = Array.isArray(hfOut) ? hfOut[0].generated_text : hfOut.generated_text;
+    let payload: any = {};
+    try {
+      const jsonMatch = generated.match(/\{[\s\S]*\}/);
+      payload = jsonMatch ? JSON.parse(jsonMatch[0]) : { raw: generated };
+    } catch {
+      payload = { raw: generated };
+    }
+
+    return res.json({ ...payload, pubmedReferences: pubmed });
+  } catch (err: any) {
+    console.error("/v1/analyze 오류:", err);
+    return res.status(500).json({ error: err.message || "알 수 없는 오류" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// 3) /v1/realtime-risk
+// ──────────────────────────────────────────────────────────────
+router.post("/v1/realtime-risk", (req, res) => {
+  const { heartRate, oxygenLevel } = req.body;
+  let score = 0;
+  const reasons: string[] = [];
+
+  if (heartRate !== undefined) {
+    if (heartRate < 60) { score += 20; reasons.push("서맥 위험"); }
+    else if (heartRate > 100) { score += 20; reasons.push("빈맥 위험"); }
+  }
+  if (oxygenLevel !== undefined) {
+    if (oxygenLevel < 90) { score += 30; reasons.push("심각 저산소증"); }
+    else if (oxygenLevel < 95) { score += 15; reasons.push("경미 저산소증"); }
+  }
+
+  const level = score >= 50 ? "높음" : score >= 20 ? "중간" : "낮음";
+  const recs = ["정기 검진 권장"];
+  if (score >= 50) recs.push("즉시 응급 지원 요청");
+
+  res.json({
+    riskScore: score,
+    riskLevel: level,
+    reasons,
+    recommendations: recs,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ──────────────────────────────────────────────────────────────
+// 4) /v1/consult : 간단 상담
+// ──────────────────────────────────────────────────────────────
+router.post("/v1/consult", async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "message가 필요합니다." });
+
+    // PubMed + HF 호출 (구조는 /chat과 유사)
+    const pubmed = await searchPubMed(message + " heart");
+    const prompt = SYSTEM_PROMPT + "\n\n" + message;
+    const hfOut = await invokeHuggingFaceModel(
+      "Henrychur/MMed-Llama-3-8B-EnIns",
+      prompt,
+      { max_new_tokens: 512, temperature: 0.4 }
+    );
+    const answer = Array.isArray(hfOut) ? hfOut[0].generated_text : hfOut.generated_text;
+
+    res.json({
+      response: answer.trim(),
+      pubmedReferences: pubmed,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error("/v1/consult 오류:", err);
+    res.status(500).json({ error: err.message || "알 수 없는 오류" });
+  }
+});
+
+export default router;
+
+주요 변경 및 유의점
+	1.	모델 ID
+	•	QWEN: "Qwen/Qwen2.5-Omni-7B"
+	•	MMed‑Llama: "Henrychur/MMed-Llama-3-8B-EnIns"
+	2.	환경 변수
+	•	반드시 .env 에 HUGGINGFACE_TOKEN, PUBMED_API_KEY, (옵션) OPENAI_API_KEY 를 채워주세요.
+	3.	fetch
+	•	Node 18 이상에서는 내장 fetch를, 구버전에서는 node-fetch 패키지를 설치 후 상단에 import fetch from 'node-fetch';를 추가해야 합니다.
+	4.	에러 핸들링
+	•	HF 호출 실패 시 콘솔에 상세 로그를 남기고, OpenAI 폴백 또는 사용자에게 에러 메시지를 응답합니다.
+
+이제 이 파일을 교체하시면 실제 Hugging Face·PubMed API를 통해 정상적으로 동작할 것입니다. 문제가 있거나 추가 조정이 필요하면 언제든 알려주세요!

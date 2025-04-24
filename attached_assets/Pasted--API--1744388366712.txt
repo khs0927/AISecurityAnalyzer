@@ -1,0 +1,839 @@
+# 미완성된 웹 애플리케이션 완성 가이드: 네이버 지도 API, 전화 연결, 블루투스 연동 및 약물 등록 기능 구현
+
+현재 개발 중인 웹 애플리케이션을 완성하기 위해 필요한 주요 기능들에 대한 구현 방법과 코드를 제공합니다. 애플리케이션의 미완성된 부분인 네이버 지도 API 연동, 전화 연결 기능, 블루투스 연결, 약학정보원 API를 통한 약물 등록 등에 대한 상세한 구현 방법을 안내합니다.
+
+## 네이버 지도 API 연동
+
+네이버 지도 API를 연동하여 지도를 표시하기 위해서는 다음 단계를 따라야 합니다.
+
+### 1. 네이버 클라우드 플랫폼 서비스 신청
+
+```html
+
+
+```
+
+위 코드에서 `YOUR_CLIENT_ID` 부분을 실제 발급받은 클라이언트 ID로 교체해야 합니다[1][6].
+
+### 2. 서비스 환경 등록 방법
+
+네이버 클라우드 플랫폼에서 다음 단계를 수행하세요:
+1. https://www.ncloud.com/product/applicationService/maps 접속
+2. 이용 신청하기 클릭
+3. Application 이름 설정 및 사용할 서비스 선택
+4. 서비스 환경 등록에서 웹 서비스 URL 입력 (로컬: http://localhost:포트번호, 배포 시: 해당 도메인)[1]
+
+### 3. 지도 초기화 코드
+
+```javascript
+// map.js 파일 생성 후 다음 코드 추가
+function initMap() {
+  try {
+    // 지도 옵션 설정
+    const mapOptions = {
+      center: new naver.maps.LatLng(37.5666805, 126.9784147), // 서울 시청 좌표
+      zoom: 15,
+      zoomControl: true,
+      zoomControlOptions: {
+        position: naver.maps.Position.TOP_RIGHT
+      }
+    };
+    
+    // 지도 생성
+    const map = new naver.maps.Map('map', mapOptions);
+    
+    // 마커 추가 (선택사항)
+    const marker = new naver.maps.Marker({
+      position: mapOptions.center,
+      map: map,
+      title: '현재 위치'
+    });
+    
+    return map;
+  } catch (error) {
+    console.error('지도 초기화 중 오류 발생:', error);
+    document.getElementById('map').innerHTML = '지도를 불러오는 중 오류가 발생했습니다.';
+  }
+}
+
+// 문서가 로드된 후 지도 초기화
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('map')) {
+    initMap();
+  }
+});
+```
+
+### 4. HTML에 지도를 표시할 div 추가
+
+```html
+
+
+```
+
+이렇게 설정하면 지정된 위치에 네이버 지도가 표시됩니다. 주의할 점은 네이버 지도 API를 사용하기 위해서는 CORS 오류를 방지하기 위해 반드시 서비스 환경에 URL을 등록해야 합니다[1][6].
+
+## 전화 연결 기능 구현
+
+전화 연결 기능은 HTML의 `tel:` 프로토콜을 사용하여 간단히 구현할 수 있습니다.
+
+### 1. 기본 전화 연결 버튼
+
+```html
+
+고객센터 연결
+```
+
+### 2. 스타일을 적용한 전화 연결 버튼
+
+```html
+
+
+  
+    
+       상담원 연결하기
+    
+  
+
+
+
+.contact-section {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.tel-link {
+  text-decoration: none;
+}
+
+.phone-button {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #028CD7;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.phone-button:hover {
+  background-color: #0278B8;
+  transform: translateY(-2px);
+}
+
+```
+
+이 코드는 `tel:` 프로토콜을 사용하여 모바일 기기에서 바로 전화를 걸 수 있는 버튼을 생성합니다[2][7].
+
+## 블루투스 연결 기능 구현
+
+Web Bluetooth API를 사용하여 웹 브라우저에서 블루투스 기기와 연결하는 기능을 구현합니다.
+
+### 1. 블루투스 연결 스크립트
+
+```javascript
+// bluetooth.js 파일 생성 후 다음 코드 추가
+class BluetoothController {
+  constructor() {
+    this.device = null;
+    this.server = null;
+    this.service = null;
+    this.characteristic = null;
+    this.isConnected = false;
+    
+    // 브라우저 지원 여부 확인
+    this.isSupported = 'bluetooth' in navigator;
+  }
+  
+  // 브라우저 지원 확인 메서드
+  checkCompatibility() {
+    if (!this.isSupported) {
+      console.error('이 브라우저는 Web Bluetooth API를 지원하지 않습니다.');
+      return false;
+    }
+    return true;
+  }
+  
+  // 기기 검색 및 연결 요청
+  async connect(serviceUUID) {
+    if (!this.checkCompatibility()) return null;
+    
+    try {
+      // 블루투스 기기 요청
+      this.device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [serviceUUID] }]
+      });
+      
+      // 연결 이벤트 리스너 추가
+      this.device.addEventListener('gattserverdisconnected', this.onDisconnected.bind(this));
+      
+      // GATT 서버 연결
+      this.server = await this.device.gatt.connect();
+      console.log(`${this.device.name}에 연결되었습니다.`);
+      
+      // 서비스 가져오기
+      this.service = await this.server.getPrimaryService(serviceUUID);
+      this.isConnected = true;
+      
+      return this.device;
+    } catch (error) {
+      console.error('블루투스 연결 중 오류 발생:', error);
+      return null;
+    }
+  }
+  
+  // 특정 특성에 연결
+  async getCharacteristic(characteristicUUID) {
+    if (!this.service) return null;
+    
+    try {
+      this.characteristic = await this.service.getCharacteristic(characteristicUUID);
+      return this.characteristic;
+    } catch (error) {
+      console.error('특성 가져오기 중 오류 발생:', error);
+      return null;
+    }
+  }
+  
+  // 데이터 읽기
+  async readValue() {
+    if (!this.characteristic) return null;
+    
+    try {
+      const value = await this.characteristic.readValue();
+      return value;
+    } catch (error) {
+      console.error('데이터 읽기 중 오류 발생:', error);
+      return null;
+    }
+  }
+  
+  // 데이터 쓰기
+  async writeValue(data) {
+    if (!this.characteristic) return false;
+    
+    try {
+      await this.characteristic.writeValue(data);
+      return true;
+    } catch (error) {
+      console.error('데이터 쓰기 중 오류 발생:', error);
+      return false;
+    }
+  }
+  
+  // 연결 해제 핸들러
+  onDisconnected() {
+    console.log(`${this.device.name}과의 연결이 해제되었습니다.`);
+    this.isConnected = false;
+  }
+  
+  // 연결 해제
+  async disconnect() {
+    if (this.device && this.device.gatt.connected) {
+      await this.device.gatt.disconnect();
+    }
+  }
+}
+```
+
+### 2. HTML에 블루투스 연결 버튼 추가
+
+```html
+
+
+  블루투스 기기 연결
+  연결 상태: 연결되지 않음
+  
+
+
+
+  // HTML이 로드된 후 실행
+  document.addEventListener('DOMContentLoaded', () => {
+    const bluetoothController = new BluetoothController();
+    const connectButton = document.getElementById('bluetooth-connect');
+    const statusElement = document.getElementById('bluetooth-status');
+    const dataElement = document.getElementById('bluetooth-data');
+    
+    // 블루투스 지원 확인
+    if (!bluetoothController.checkCompatibility()) {
+      connectButton.disabled = true;
+      statusElement.textContent = '연결 상태: 이 브라우저는 블루투스를 지원하지 않습니다.';
+      return;
+    }
+    
+    // 연결 버튼 클릭 이벤트 처리
+    connectButton.addEventListener('click', async () => {
+      // 예시로 심박수 측정 서비스 UUID 사용 (실제 기기에 맞게 수정 필요)
+      const heartRateServiceUUID = '0000180d-0000-1000-8000-00805f9b34fb';
+      const heartRateCharacteristicUUID = '00002a37-0000-1000-8000-00805f9b34fb';
+      
+      try {
+        statusElement.textContent = '연결 상태: 기기 검색 중...';
+        const device = await bluetoothController.connect(heartRateServiceUUID);
+        
+        if (device) {
+          statusElement.textContent = `연결 상태: ${device.name}에 연결됨`;
+          
+          // 특성 가져오기
+          const characteristic = await bluetoothController.getCharacteristic(heartRateCharacteristicUUID);
+          
+          if (characteristic) {
+            // 알림 설정 (데이터 변경 시 이벤트 발생)
+            await characteristic.startNotifications();
+            characteristic.addEventListener('characteristicvaluechanged', (event) => {
+              const value = event.target.value;
+              // 심박수 데이터 파싱 (예시)
+              const heartRate = value.getUint8(1);
+              dataElement.textContent = `심박수: ${heartRate} BPM`;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('블루투스 연결 오류:', error);
+        statusElement.textContent = '연결 상태: 연결 실패';
+      }
+    });
+  });
+
+
+
+.bluetooth-section {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+}
+
+.bluetooth-button {
+  padding: 10px 20px;
+  background-color: #4A89DC;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bluetooth-button:hover {
+  background-color: #3A79CC;
+}
+
+.bluetooth-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+#bluetooth-status, #bluetooth-data {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+```
+
+이 코드는 Web Bluetooth API를 사용하여 심박수 측정 기기와 같은 블루투스 기기와 연결하고 데이터를 수신하는 예제입니다. 실제 사용할 기기의 서비스 UUID와 특성 UUID에 맞게 조정해야 합니다[3][8].
+
+## 약학정보원 API를 통한 약물 등록 기능
+
+식약처 공개 API를 활용하여 약물 정보를 등록하고 검색하는 기능을 구현합니다.
+
+### 1. 약물 정보 검색 및 등록 스크립트
+
+```javascript
+// medicine.js 파일 생성 후 다음 코드 추가
+class MedicineAPI {
+  constructor() {
+    // 식약처 공개 API 기본 URL (실제 API URL로 교체해야 함)
+    this.baseUrl = 'https://api.example.com/medicines';
+    this.apiKey = 'YOUR_API_KEY'; // 실제 API 키로 교체
+  }
+  
+  // 약물 검색 메서드
+  async searchMedicine(keyword) {
+    try {
+      const url = `${this.baseUrl}/search?keyword=${encodeURIComponent(keyword)}&key=${this.apiKey}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`API 요청 실패: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.items || [];
+    } catch (error) {
+      console.error('약물 검색 중 오류 발생:', error);
+      return [];
+    }
+  }
+  
+  // 약물 상세 정보 조회 메서드
+  async getMedicineDetails(itemSeq) {
+    try {
+      const url = `${this.baseUrl}/detail?itemSeq=${itemSeq}&key=${this.apiKey}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`API 요청 실패: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.item || null;
+    } catch (error) {
+      console.error('약물 상세 정보 조회 중 오류 발생:', error);
+      return null;
+    }
+  }
+  
+  // 약물 등록 메서드 (로컬 저장소 활용)
+  saveMedicine(medicine) {
+    try {
+      // 현재 저장된 약물 목록 가져오기
+      const savedMedicines = this.getSavedMedicines();
+      
+      // 이미 저장된 약물인지 확인
+      const isDuplicate = savedMedicines.some(item => item.itemSeq === medicine.itemSeq);
+      
+      if (isDuplicate) {
+        console.log('이미 저장된 약물입니다.');
+        return false;
+      }
+      
+      // 새 약물 추가
+      savedMedicines.push(medicine);
+      
+      // 로컬 스토리지에 저장
+      localStorage.setItem('savedMedicines', JSON.stringify(savedMedicines));
+      return true;
+    } catch (error) {
+      console.error('약물 저장 중 오류 발생:', error);
+      return false;
+    }
+  }
+  
+  // 저장된 약물 목록 가져오기
+  getSavedMedicines() {
+    try {
+      const savedMedicines = localStorage.getItem('savedMedicines');
+      return savedMedicines ? JSON.parse(savedMedicines) : [];
+    } catch (error) {
+      console.error('저장된 약물 목록 가져오기 실패:', error);
+      return [];
+    }
+  }
+  
+  // 저장된 약물 삭제
+  removeMedicine(itemSeq) {
+    try {
+      const savedMedicines = this.getSavedMedicines();
+      const updatedMedicines = savedMedicines.filter(item => item.itemSeq !== itemSeq);
+      localStorage.setItem('savedMedicines', JSON.stringify(updatedMedicines));
+      return true;
+    } catch (error) {
+      console.error('약물 삭제 중 오류 발생:', error);
+      return false;
+    }
+  }
+}
+```
+
+### 2. HTML에 약물 검색 및 등록 UI 추가
+
+```html
+
+
+  약물 검색 및 등록
+  
+  
+    
+    검색
+  
+  
+  
+    
+  
+  
+  저장된 약물 목록
+  
+    
+  
+
+
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const medicineAPI = new MedicineAPI();
+    const searchInput = document.getElementById('medicine-search');
+    const searchButton = document.getElementById('search-button');
+    const searchResults = document.getElementById('search-results');
+    const savedMedicinesElem = document.getElementById('saved-medicines');
+    
+    // 저장된 약물 목록 표시
+    function displaySavedMedicines() {
+      const medicines = medicineAPI.getSavedMedicines();
+      
+      if (medicines.length === 0) {
+        savedMedicinesElem.innerHTML = '저장된 약물이 없습니다.';
+        return;
+      }
+      
+      let html = '';
+      medicines.forEach(medicine => {
+        html += `
+          
+            
+              ${medicine.itemName}
+              제조사: ${medicine.entpName}
+              성분: ${medicine.ingr}
+            
+            
+              상세정보
+              삭제
+            
+          
+        `;
+      });
+      html += '';
+      
+      savedMedicinesElem.innerHTML = html;
+      
+      // 버튼 이벤트 리스너 추가
+      document.querySelectorAll('.details-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const itemSeq = btn.getAttribute('data-id');
+          const details = await medicineAPI.getMedicineDetails(itemSeq);
+          
+          if (details) {
+            alert(`약물 정보:\n- 이름: ${details.itemName}\n- 제조사: ${details.entpName}\n- 효능효과: ${details.efcyQesitm}\n- 용법용량: ${details.useMethodQesitm}`);
+          } else {
+            alert('상세 정보를 가져올 수 없습니다.');
+          }
+        });
+      });
+      
+      document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const itemSeq = btn.getAttribute('data-id');
+          if (confirm('이 약물을 삭제하시겠습니까?')) {
+            medicineAPI.removeMedicine(itemSeq);
+            displaySavedMedicines();
+          }
+        });
+      });
+    }
+    
+    // 초기 약물 목록 표시
+    displaySavedMedicines();
+    
+    // 검색 버튼 클릭 이벤트
+    searchButton.addEventListener('click', async () => {
+      const keyword = searchInput.value.trim();
+      
+      if (!keyword) {
+        alert('검색어를 입력해주세요.');
+        return;
+      }
+      
+      searchResults.innerHTML = '검색 중...';
+      
+      const results = await medicineAPI.searchMedicine(keyword);
+      
+      if (results.length === 0) {
+        searchResults.innerHTML = '검색 결과가 없습니다.';
+        return;
+      }
+      
+      let html = '';
+      results.forEach(medicine => {
+        html += `
+          
+            
+              ${medicine.itemName}
+              제조사: ${medicine.entpName}
+            
+            저장
+          
+        `;
+      });
+      html += '';
+      
+      searchResults.innerHTML = html;
+      
+      // 저장 버튼 이벤트 리스너
+      document.querySelectorAll('.save-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const itemSeq = btn.getAttribute('data-id');
+          const medicine = results.find(item => item.itemSeq === itemSeq);
+          
+          if (medicine) {
+            const success = medicineAPI.saveMedicine(medicine);
+            
+            if (success) {
+              alert('약물이 저장되었습니다.');
+              displaySavedMedicines();
+            } else {
+              alert('이미 저장된 약물입니다.');
+            }
+          }
+        });
+      });
+    });
+    
+    // 엔터 키 이벤트 처리
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        searchButton.click();
+      }
+    });
+  });
+
+
+
+.medicine-section {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+}
+
+.search-container {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+#medicine-search {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-right: 10px;
+}
+
+#search-button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.search-results, .saved-medicines {
+  margin-top: 15px;
+}
+
+.medicine-list, .search-results-list {
+  list-style: none;
+  padding: 0;
+}
+
+.medicine-item, .search-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #eee;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.medicine-info, .result-info {
+  flex: 1;
+}
+
+.medicine-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.details-btn, .remove-btn, .save-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.details-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.remove-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.save-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+```
+
+이 코드는 식약처 공개 API를 활용하여 약물을 검색하고 저장하는 기능을 구현합니다. 실제 API 주소와 키를 사용해야 하며, 필요에 따라 API 호출 방식을 조정해야 합니다[4].
+
+## 전체 애플리케이션 통합
+
+위에서 제시한 각 기능을 기존 애플리케이션에 통합하기 위해 다음과 같은 파일 구조를 권장합니다:
+
+```
+/
+├── index.html             # 메인 HTML 파일
+├── css/
+│   └── style.css          # 스타일시트
+├── js/
+│   ├── map.js             # 네이버 지도 관련 스크립트
+│   ├── bluetooth.js       # 블루투스 연결 관련 스크립트
+│   └── medicine.js        # 약물 API 관련 스크립트
+└── assets/
+    └── images/            # 이미지 파일
+```
+
+### index.html 파일에 모든 스크립트와 스타일 통합
+
+```html
+
+
+
+  
+  
+  건강 관리 애플리케이션
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+
+  
+    건강 관리 애플리케이션
+    
+      
+        지도
+        블루투스
+        약물 관리
+        연락처
+      
+    
+  
+  
+  
+    
+    
+      주변 약국 찾기
+      
+    
+    
+    
+    
+      건강 기기 연결
+      
+        블루투스 기기 연결
+        연결 상태: 연결되지 않음
+        
+      
+    
+    
+    
+    
+      약물 검색 및 등록
+      
+        
+          
+          검색
+        
+        
+        
+          
+        
+        
+        저장된 약물 목록
+        
+          
+        
+      
+    
+    
+    
+    
+      도움이 필요하신가요?
+      
+        건강 관련 상담이 필요하시면 아래 버튼을 클릭하여 전문가와 연결하세요.
+        
+          
+             상담원 연결하기
+          
+        
+      
+    
+  
+  
+  
+    &copy; 2025 건강 관리 애플리케이션. All rights reserved.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+    document.addEventListener('DOMContentLoaded', () => {
+      // 지도 초기화
+      if (document.getElementById('map')) {
+        initMap();
+      }
+      
+      // 블루투스 컨트롤러 초기화
+      const bluetoothController = new BluetoothController();
+      
+      // 약물 API 초기화
+      const medicineAPI = new MedicineAPI();
+      
+      // 여기에 추가 초기화 코드가 필요
+    });
+  
+
+
+```
+
+## 마치며
+
+이 가이드에서는 웹 애플리케이션의 주요 미완성 부분을 완성하기 위한 코드와 방법을 제공했습니다. 네이버 지도 API 연동, 전화 연결 기능, 블루투스 연결, 약학정보원 API를 통한 약물 등록 기능을 구현했습니다.
+
+실제 구현 시 주의할 점:
+1. API 키는 보안을 위해 서버 측에서 관리하는 것이 좋습니다
+2. 블루투스 기능은 HTTPS 환경에서만 작동합니다
+3. 네이버 지도 API 사용 시 서비스 환경에 URL을 등록해야 CORS 오류를 방지할 수 있습니다
+4. 약물 API 사용 시 실제 API 엔드포인트와 매개변수를 확인해야 합니다
+
+이 가이드를 바탕으로 애플리케이션의 미완성 부분을 완성하고, 사용자에게 유용한 기능을 제공하는 건강 관리 애플리케이션을 구축하시기 바랍니다.
+
+Citations:
+[1] https://velog.io/@cogito/%EB%84%A4%EC%9D%B4%EB%B2%84-%EC%A7%80%EB%8F%84-API-1%ED%8E%B8-%EC%84%9C%EB%B9%84%EC%8A%A4-%EC%8B%A0%EC%B2%AD%ED%95%98%EA%B8%B0
+[2] https://zoo-land.tistory.com/158
+[3] https://www.jaenung.net/tree/1049
+[4] https://www.health.kr/notice/QnA_view.asp?show_idx=6672&search_value=&search_term=all&paging_value=&setLine=15&setCategory=2
+[5] https://jjuon.tistory.com/13
+[6] https://navermaps.github.io/maps.js.ncp/docs/tutorial-2-Getting-Started.html
+[7] https://programmerplum.tistory.com/83
+[8] https://www.jaenung.net/tree/10058
+[9] https://www.data.go.kr/data/15057639/openapi.do
+[10] https://velog.io/@lsx2003/Node.js-Express-req-res-%EA%B0%9D%EC%B2%B4
+[11] https://blog.naver.com/n_cloudplatform/222012109447
+[12] https://www.everdevel.com/HTML/mobile-atag-tel/
+[13] https://developer.mozilla.org/ko/docs/Web/API/Web_Bluetooth_API
+[14] https://www.health.kr/notice/QnA_view.asp?show_idx=6880&search_value=&search_term=all&paging_value=&setLine=15&setCategory=2
+[15] https://velog.io/@jessiii/Node.js%EB%B2%88%EC%97%AD-node-Express.js%EB%A1%9C-%EA%B0%9C%EB%B0%9C-%EC%A4%80%EB%B9%84%ED%95%98%EA%B8%B0
+[16] https://navermaps.github.io/maps.js.ncp/docs/tutorial-digest.example.html
+[17] https://develop-sense.tistory.com/entry/html-a-taga-%ED%83%9C%EA%B7%B8-%EC%82%AC%EC%9A%A9-%EB%B0%8F-%ED%99%9C%EC%9A%A9%EB%B2%95%EC%A0%84%ED%99%94%EA%B1%B8%EA%B8%B0-%EB%AC%B8%EC%9E%90%EB%B3%B4%EB%82%B4%EA%B8%B0-%EB%A9%94%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0
+[18] https://web.dev/articles/bluetooth
+[19] https://data.mfds.go.kr/OPCAA01F01/search?selectedTab=tab1&taskDivsCd=3&taskDivsDtlCd=7&rchSrvcKorNm=&btnSearch=
+[20] https://chloekim66.tistory.com/106
+
+---
+Perplexity로부터의 답변: pplx.ai/share

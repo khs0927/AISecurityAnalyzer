@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare QR 코드</title>
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f9f9f9;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #FF6D94;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        #qrcode {
+            margin: 20px auto;
+        }
+        .url {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f2f2f2;
+            border-radius: 5px;
+            font-family: monospace;
+            word-break: break-all;
+            text-align: center;
+        }
+        .note {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HeartCare 모바일 앱</h1>
+        <p>아이폰에서 Expo Go 앱을 열고 아래 QR 코드를 스캔하세요.</p>
+        
+        <div id="qrcode"></div>
+        
+        <div class="url">
+            <span id="server-url"></span>
+        </div>
+        
+        <p class="note">QR 코드를 스캔하면 Expo Go를 통해 웹 앱이 열립니다.</p>
+    </div>
+
+    <script>
+        // 현재 URL에서 "/qr-code.html" 부분을 제거하고 서버 URL 생성
+        const currentUrl = window.location.href;
+        const serverUrl = currentUrl.replace('/qr-code.html', '');
+        
+        document.getElementById('server-url').textContent = serverUrl;
+        
+        // QR 코드 생성
+        const qrcode = new QRCode(document.getElementById("qrcode"), {
+            text: serverUrl,
+            width: 200,
+            height: 200,
+            colorDark: "#FF6D94",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    </script>
+</body>
+</html>

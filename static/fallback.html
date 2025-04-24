@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare 모바일 앱</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            padding-bottom: 80px;
+        }
+        .header {
+            background-color: #FF6D94;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .subtitle {
+            margin-top: 10px;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .card {
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            color: #FF6D94;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .feature {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .feature:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .feature-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        .feature-text {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .health-stats {
+            display: flex;
+            justify-content: space-between;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .stat-item {
+            flex: 1;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF6D94;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .button {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #ff5483;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+        .watch-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-radius: 10px;
+            color: #2e7d32;
+        }
+        .watch-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            background-color: #2e7d32;
+            border-radius: 50%;
+            position: relative;
+        }
+        .navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-item {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            text-decoration: none;
+        }
+        .nav-item.active {
+            color: #FF6D94;
+            font-weight: bold;
+        }
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HeartCare</h1>
+            <div class="subtitle">낫투데이 - 심장 건강 모니터링 앱</div>
+        </div>
+
+        <div class="watch-status">
+            <div class="watch-icon"></div>
+            <span>Galaxy Watch 연결됨</span>
+        </div>
+
+        <div class="card">
+            <div class="card-title">현재 건강 상태</div>
+            <div class="health-stats">
+                <div class="stat-item">
+                    <div class="stat-value">72</div>
+                    <div class="stat-label">심박수</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">120/80</div>
+                    <div class="stat-label">혈압</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">98%</div>
+                    <div class="stat-label">산소포화도</div>
+                </div>
+            </div>
+            <a href="views/heart_diagnosis.html" class="button">상세 보기</a>
+        </div>
+
+        <div class="card">
+            <div class="card-title">앱 기능</div>
+            <div class="feature">
+                <div class="feature-title">심장 진단</div>
+                <div class="feature-text">ECG/PPG 데이터 분석과 건강 상태 모니터링</div>
+            </div>
+            <div class="feature">
+                <div class="feature-title">응급 처치</div>
+                <div class="feature-text">상황별 응급 처치 가이드 제공</div>
+            </div>
+            <div class="feature">
+                <div class="feature-title">비상 연락</div>
+                <div class="feature-text">보호자 관리 및 긴급 연락 기능</div>
+            </div>
+            <div class="feature">
+                <div class="feature-title">AI 상담</div>
+                <div class="feature-text">건강 관련 질문에 대한 AI 상담 서비스</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">빠른 액션</div>
+            <a href="views/heart_diagnosis.html" class="button">측정 시작</a>
+            <a href="views/emergency_guide.html" class="button" style="margin-top: 15px;">응급 처치</a>
+            <a href="views/emergency_contacts.html" class="button" style="margin-top: 15px;">긴급 연락</a>
+            <a href="views/ai_consultation.html" class="button" style="margin-top: 15px;">AI 상담</a>
+        </div>
+
+        <div class="footer">
+            © 2025 낫투데이(HeartCare) | 버전 1.0.0
+        </div>
+    </div>
+
+    <div class="navigation">
+        <a href="views/heart_diagnosis.html" class="nav-item">
+            <span class="nav-icon">❤️</span>
+            <span>심장진단</span>
+        </a>
+        <a href="views/emergency_guide.html" class="nav-item">
+            <span class="nav-icon">🚑</span>
+            <span>응급처치</span>
+        </a>
+        <a href="views/emergency_contacts.html" class="nav-item">
+            <span class="nav-icon">📞</span>
+            <span>비상연락</span>
+        </a>
+        <a href="views/ai_consultation.html" class="nav-item">
+            <span class="nav-icon">🤖</span>
+            <span>AI 상담</span>
+        </a>
+    </div>
+</body>
+</html>

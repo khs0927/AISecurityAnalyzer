@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare Expo 인텐트</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1, h2 { 
+            color: #FF6D94; 
+            margin-bottom: 15px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .intent-link {
+            display: block;
+            width: 100%;
+            padding: 15px 0;
+            margin: 10px 0;
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+        }
+        .intent-link.alternative {
+            background-color: #4630EB;
+        }
+        .warning {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            border-left: 4px solid #ffc107;
+        }
+        .info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            border-left: 4px solid #2196f3;
+        }
+        .platform-toggle {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .platform-button {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+        .platform-button.active {
+            background-color: #FF6D94;
+            color: white;
+            font-weight: bold;
+        }
+        .platform-button:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+        .platform-button:last-child {
+            border-radius: 0 8px 8px 0;
+        }
+        .platform-content {
+            display: none;
+        }
+        .platform-content.active {
+            display: block;
+        }
+        .code {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            word-break: break-all;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>HeartCare Expo 고급 연결</h1>
+    
+    <div class="platform-toggle">
+        <div class="platform-button active" onclick="selectPlatform('android')">Android</div>
+        <div class="platform-button" onclick="selectPlatform('ios')">iOS</div>
+    </div>
+    
+    <div id="android-content" class="platform-content active">
+        <div class="card">
+            <h2>Android 인텐트 스킴</h2>
+            <p>Android에서는 인텐트 스킴을 사용하여 앱으로 직접 연결할 수 있습니다:</p>
+            
+            <a href="intent://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0#Intent;scheme=exp;package=host.exp.exponent;end" class="intent-link">
+                인텐트로 Expo Go 열기
+            </a>
+            
+            <div class="warning">
+                <p><strong>참고:</strong> 인텐트 스킴은 Android 기기에서만 작동하며, 모든 브라우저에서 지원되지 않을 수 있습니다. Chrome 브라우저를 사용하는 것이 가장 좋습니다.</p>
+            </div>
+            
+            <div class="info">
+                <p><strong>인텐트 스킴이란?</strong> Android에서 앱을 호출하는 특수한 형식의 URL입니다. 이 방식은 앱이 설치되어 있지 않은 경우에도 Play Store로 리디렉션할 수 있습니다.</p>
+            </div>
+            
+            <h3>인텐트 URL 형식</h3>
+            <div class="code">
+                intent://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0#Intent;scheme=exp;package=host.exp.exponent;end
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>대체 연결 방법</h2>
+            
+            <a href="exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0" class="intent-link">
+                exp:// 스킴으로 시도
+            </a>
+            
+            <a href="expo://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0" class="intent-link alternative">
+                expo:// 스킴으로 시도
+            </a>
+            
+            <a href="https://expo.dev/@hsml/heart-care-expo" class="intent-link" style="background-color: #009688;">
+                웹 리디렉션으로 시도
+            </a>
+            
+            <div class="info">
+                <p><strong>안내:</strong> 위 버튼들이 작동하지 않으면 Expo Go 앱에서 다음 URL을 직접 입력해보세요:</p>
+                <div class="code">exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0</div>
+                <p>Expo Go 앱 → 프로필 탭 → URL 입력 → 위 URL 붙여넣기</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>문제 해결</h2>
+            <ul>
+                <li>Expo Go 앱이 최신 버전인지 확인하세요</li>
+                <li>Chrome 브라우저를 사용하세요</li>
+                <li>인터넷 연결이 안정적인지 확인하세요</li>
+                <li>다른 버튼과 링크를 시도해보세요</li>
+                <li>인텐트 스킴이 작동하지 않으면 Expo Go 앱을 먼저 실행해보세요</li>
+            </ul>
+            
+            <a href="/connection-test.html" class="intent-link" style="background-color: #607d8b;">
+                상세 연결 진단 실행
+            </a>
+        </div>
+    </div>
+    
+    <div id="ios-content" class="platform-content">
+        <div class="card">
+            <h2>iOS 유니버설 링크</h2>
+            <p>iOS에서는 Universal Links와 커스텀 URL 스킴을 사용할 수 있습니다:</p>
+            
+            <a href="exps://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0" class="intent-link">
+                exps:// 스킴으로 열기 (권장)
+            </a>
+            
+            <a href="https://exp.host/--/to-exp/exp%3A%2F%2Fexp.host%2F%40hsml%2Fheart-care-expo%3Fruntime-version%3Dexposdk%3A50.0.0" class="intent-link alternative">
+                유니버설 링크 시도
+            </a>
+            
+            <div class="warning">
+                <p><strong>참고:</strong> iOS에서는 Safari 브라우저를 사용하는 것이 가장 좋습니다. Safari에서 "방문 웹사이트에서 앱 열기"를 허용해야 합니다.</p>
+            </div>
+            
+            <div class="info">
+                <p><strong>유니버설 링크란?</strong> 웹 URL과 앱을 연결하는 Apple의 기술입니다. 앱이 설치되어 있으면 앱을 열고, 그렇지 않으면 웹 페이지로 리디렉션합니다.</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>대체 연결 방법</h2>
+            
+            <a href="exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0" class="intent-link">
+                exp:// 스킴으로 시도
+            </a>
+            
+            <a href="expo://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0" class="intent-link alternative">
+                expo:// 스킴으로 시도
+            </a>
+            
+            <a href="https://expo.dev/@hsml/heart-care-expo" class="intent-link" style="background-color: #009688;">
+                웹 리디렉션으로 시도
+            </a>
+            
+            <div class="info">
+                <p><strong>안내:</strong> 위 버튼들이 작동하지 않으면 Expo Go 앱에서 다음 URL을 직접 입력해보세요:</p>
+                <div class="code">exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0</div>
+                <p>Expo Go 앱 → 프로필 탭 → URL 입력 → 위 URL 붙여넣기</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>문제 해결</h2>
+            <ul>
+                <li>Safari 브라우저를 사용하세요</li>
+                <li>iOS 설정 앱에서 Safari 설정을 확인하세요</li>
+                <li>Expo Go 앱이 최신 버전인지 확인하세요</li>
+                <li>다른 버튼과 링크를 시도해보세요</li>
+                <li>링크를 길게 눌러 "Safari에서 열기" 옵션을 선택해보세요</li>
+            </ul>
+            
+            <a href="/connection-test.html" class="intent-link" style="background-color: #607d8b;">
+                상세 연결 진단 실행
+            </a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>연결 리소스</h2>
+        <a href="/mobile-guide.html" class="intent-link" style="background-color: #607d8b;">
+            모바일 연결 가이드
+        </a>
+        <a href="/universal-link.html" class="intent-link" style="background-color: #607d8b;">
+            유니버설 링크
+        </a>
+        <a href="/expo-deep-link.html" class="intent-link" style="background-color: #607d8b;">
+            딥 링크
+        </a>
+    </div>
+
+    <script>
+        function selectPlatform(platform) {
+            // 모든 버튼 비활성화
+            document.querySelectorAll('.platform-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // 모든 콘텐츠 숨기기
+            document.querySelectorAll('.platform-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 선택한 플랫폼 버튼 활성화
+            document.querySelector(`.platform-button:nth-child(${platform === 'android' ? '1' : '2'})`).classList.add('active');
+            
+            // 선택한 플랫폼 콘텐츠 표시
+            document.getElementById(`${platform}-content`).classList.add('active');
+        }
+        
+        // 페이지 로드 시
+        window.onload = function() {
+            // 사용자 OS 감지
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isAndroid = /Android/.test(navigator.userAgent);
+            
+            // 감지된 OS에 따라 적절한 탭 선택
+            if (isIOS) {
+                selectPlatform('ios');
+            } else if (isAndroid) {
+                selectPlatform('android');
+            }
+            // 기본값은 Android (이미 활성화됨)
+        };
+    </script>
+</body>
+</html>

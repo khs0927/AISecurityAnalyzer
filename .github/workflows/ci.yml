@@ -1,0 +1,109 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: echo "matrix={\"project\":[\"root\",\"client\",\"server\",\"mobile\"]}" >> $GITHUB_OUTPUT
+
+  lint-build-test:
+    needs: setup-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Set working directory
+        run: |
+          if [[ "${{ matrix.project }}" != "root" ]]; then
+            echo "WORKING_DIR=${{ matrix.project }}" >> $GITHUB_ENV
+          else
+            echo "WORKING_DIR=." >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd $WORKING_DIR
+          if [ -f package.json ]; then
+            npm ci
+          fi
+
+      - name: Run Lint (if available)
+        run: |
+          cd $WORKING_DIR
+          if npm run | grep -q "lint"; then
+            npm run lint
+          else
+            echo "No lint script, skipping."
+          fi
+
+      - name: Run Tests (if available)
+        run: |
+          cd $WORKING_DIR
+          if npm run | grep -q "test"; then
+            npm test --if-present -- --runInBand
+          else
+            echo "No test script, skipping."
+          fi
+
+      - name: Build (if available)
+        run: |
+          cd $WORKING_DIR
+          if npm run | grep -q "build"; then
+            npm run build
+          else
+            echo "No build script, skipping."
+          fi
+
+      - name: Upload Build Artifact
+        if: success() && matrix.project != 'root'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.project }}-build
+          path: ${{ env.WORKING_DIR }}/dist/**
+          if-no-files-found: ignore
+
+      - name: Check env files
+        if: matrix.project == 'root'
+        run: |
+          npm run lint:env
+          npm run verify:env
+
+  security-scan:
+    needs: lint-build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+      - name: Secret Scan
+        uses: trufflesecurity/trufflehog@v3
+        with:
+          scanArguments: "--no-update --regex --entropy=False --json"
+
+  deploy:
+    needs: [lint-build-test, security-scan]
+    if: github.ref == 'refs/heads/main' && success()
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit 

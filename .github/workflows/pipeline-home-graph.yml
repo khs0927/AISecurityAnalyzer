@@ -1,0 +1,496 @@
+name: "② 홈·그래프 실동작 구현"
+
+on:
+  repository_dispatch:
+    types: [trigger-pipeline-home-graph]
+  workflow_dispatch:
+    inputs:
+      auto_merge:
+        description: '자동으로 main에 머지하기'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  NODE_VERSION: 18
+  BRANCH_NAME: feature/home-graph
+
+jobs:
+  implement-home-graph:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Create feature branch
+        run: |
+          git checkout -b ${{ env.BRANCH_NAME }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm ci
+      
+      - name: Implement Home Dashboard
+        run: |
+          # 1. 홈 화면 컴포넌트 생성
+          mkdir -p client/src/components/home
+          
+          cat > client/src/components/home/HealthDashboard.tsx << 'EOF'
+          import React, { useEffect, useState } from 'react';
+          import { LineChart, BarChart, PieChart } from '../charts';
+          import { HealthStats, HealthCard, StatusIndicator } from '../common';
+          
+          const HealthDashboard = () => {
+            const [healthData, setHealthData] = useState({
+              heartRate: { current: 72, min: 62, max: 85, history: [] },
+              oxygenLevel: { current: 98, min: 95, max: 100, history: [] },
+              bloodPressure: { systolic: 120, diastolic: 80, history: [] },
+              riskLevel: { current: 12, history: [] }
+            });
+            
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+              // 데이터 불러오기
+              const fetchHealthData = async () => {
+                try {
+                  const response = await fetch('/api/health-data/latest');
+                  if (response.ok) {
+                    const data = await response.json();
+                    setHealthData(data);
+                  }
+                } catch (error) {
+                  console.error('건강 데이터 로딩 실패:', error);
+                } finally {
+                  setLoading(false);
+                }
+              };
+              
+              fetchHealthData();
+              // 10초마다 갱신
+              const interval = setInterval(fetchHealthData, 10000);
+              
+              return () => clearInterval(interval);
+            }, []);
+            
+            if (loading) return <div className="loading">데이터 로딩 중...</div>;
+            
+            return (
+              <div className="health-dashboard">
+                <h2>실시간 건강 상태</h2>
+                
+                <div className="dashboard-grid">
+                  <HealthCard 
+                    title="심박수" 
+                    value={`${healthData.heartRate.current} BPM`}
+                    status={healthData.heartRate.current > 100 ? 'warning' : 'normal'}
+                    icon="heart"
+                  />
+                  
+                  <HealthCard 
+                    title="산소포화도" 
+                    value={`${healthData.oxygenLevel.current}%`}
+                    status={healthData.oxygenLevel.current < 95 ? 'warning' : 'normal'}
+                    icon="lungs"
+                  />
+                  
+                  <HealthCard 
+                    title="혈압" 
+                    value={`${healthData.bloodPressure.systolic}/${healthData.bloodPressure.diastolic}`}
+                    status={healthData.bloodPressure.systolic > 140 ? 'warning' : 'normal'}
+                    icon="heart-pulse"
+                  />
+                  
+                  <HealthCard 
+                    title="위험도" 
+                    value={`${healthData.riskLevel.current}%`}
+                    status={healthData.riskLevel.current > 50 ? 'danger' : 
+                           healthData.riskLevel.current > 20 ? 'warning' : 'normal'}
+                    icon="warning"
+                  />
+                </div>
+                
+                <div className="dashboard-charts">
+                  <LineChart 
+                    title="심박수 추이" 
+                    data={healthData.heartRate.history} 
+                    yAxisLabel="BPM"
+                    color="#ff6384"
+                  />
+                  
+                  <LineChart 
+                    title="산소포화도 추이" 
+                    data={healthData.oxygenLevel.history} 
+                    yAxisLabel="%"
+                    color="#36a2eb"
+                  />
+                </div>
+                
+                <HealthStats data={healthData} />
+                
+                <StatusIndicator riskLevel={healthData.riskLevel.current} />
+              </div>
+            );
+          };
+          
+          export default HealthDashboard;
+          EOF
+          
+          # 2. 차트 컴포넌트 생성
+          mkdir -p client/src/components/charts
+          
+          cat > client/src/components/charts/LineChart.tsx << 'EOF'
+          import React from 'react';
+          import { Line } from 'react-chartjs-2';
+          import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+          
+          ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+          
+          interface LineChartProps {
+            title: string;
+            data: Array<{ timestamp: string; value: number }>;
+            yAxisLabel: string;
+            color: string;
+          }
+          
+          const LineChart: React.FC<LineChartProps> = ({ title, data, yAxisLabel, color }) => {
+            const chartData = {
+              labels: data.map(item => {
+                const date = new Date(item.timestamp);
+                return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+              }),
+              datasets: [
+                {
+                  label: title,
+                  data: data.map(item => item.value),
+                  borderColor: color,
+                  backgroundColor: `${color}33`,
+                  tension: 0.4,
+                  fill: true,
+                },
+              ],
+            };
+            
+            const options = {
+              responsive: true,
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                title: {
+                  display: true,
+                  text: title,
+                },
+              },
+              scales: {
+                y: {
+                  title: {
+                    display: true,
+                    text: yAxisLabel,
+                  },
+                },
+              },
+            };
+            
+            return <Line data={chartData} options={options} />;
+          };
+          
+          export default LineChart;
+          EOF
+          
+          cat > client/src/components/charts/BarChart.tsx << 'EOF'
+          import React from 'react';
+          import { Bar } from 'react-chartjs-2';
+          import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+          
+          ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+          
+          interface BarChartProps {
+            title: string;
+            data: {
+              labels: string[];
+              values: number[];
+            };
+            yAxisLabel: string;
+            color: string;
+          }
+          
+          const BarChart: React.FC<BarChartProps> = ({ title, data, yAxisLabel, color }) => {
+            const chartData = {
+              labels: data.labels,
+              datasets: [
+                {
+                  label: title,
+                  data: data.values,
+                  backgroundColor: color,
+                },
+              ],
+            };
+            
+            const options = {
+              responsive: true,
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                title: {
+                  display: true,
+                  text: title,
+                },
+              },
+              scales: {
+                y: {
+                  title: {
+                    display: true,
+                    text: yAxisLabel,
+                  },
+                },
+              },
+            };
+            
+            return <Bar data={chartData} options={options} />;
+          };
+          
+          export default BarChart;
+          EOF
+          
+          cat > client/src/components/charts/PieChart.tsx << 'EOF'
+          import React from 'react';
+          import { Pie } from 'react-chartjs-2';
+          import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+          
+          ChartJS.register(ArcElement, Tooltip, Legend);
+          
+          interface PieChartProps {
+            title: string;
+            data: {
+              labels: string[];
+              values: number[];
+              colors: string[];
+            };
+          }
+          
+          const PieChart: React.FC<PieChartProps> = ({ title, data }) => {
+            const chartData = {
+              labels: data.labels,
+              datasets: [
+                {
+                  label: title,
+                  data: data.values,
+                  backgroundColor: data.colors,
+                  borderWidth: 1,
+                },
+              ],
+            };
+            
+            const options = {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'bottom' as const,
+                },
+                title: {
+                  display: true,
+                  text: title,
+                },
+              },
+            };
+            
+            return <Pie data={chartData} options={options} />;
+          };
+          
+          export default PieChart;
+          EOF
+          
+          cat > client/src/components/charts/index.ts << 'EOF'
+          export { default as LineChart } from './LineChart';
+          export { default as BarChart } from './BarChart';
+          export { default as PieChart } from './PieChart';
+          EOF
+          
+          # 3. 공통 컴포넌트 생성
+          mkdir -p client/src/components/common
+          
+          cat > client/src/components/common/HealthCard.tsx << 'EOF'
+          import React from 'react';
+          
+          interface HealthCardProps {
+            title: string;
+            value: string;
+            status: 'normal' | 'warning' | 'danger';
+            icon: string;
+          }
+          
+          const HealthCard: React.FC<HealthCardProps> = ({ title, value, status, icon }) => {
+            return (
+              <div className={`health-card ${status}`}>
+                <div className="card-icon">
+                  <i className={`fas fa-${icon}`}></i>
+                </div>
+                <div className="card-content">
+                  <h3>{title}</h3>
+                  <p className="value">{value}</p>
+                </div>
+              </div>
+            );
+          };
+          
+          export default HealthCard;
+          EOF
+          
+          cat > client/src/components/common/HealthStats.tsx << 'EOF'
+          import React from 'react';
+          
+          interface HealthStatsProps {
+            data: any;
+          }
+          
+          const HealthStats: React.FC<HealthStatsProps> = ({ data }) => {
+            return (
+              <div className="health-stats">
+                <h3>요약 통계</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="label">평균 심박수</span>
+                    <span className="value">
+                      {Math.round(
+                        data.heartRate.history.reduce((acc: number, curr: any) => acc + curr.value, 0) / 
+                        Math.max(1, data.heartRate.history.length)
+                      )} BPM
+                    </span>
+                  </div>
+                  
+                  <div className="stat-item">
+                    <span className="label">평균 산소포화도</span>
+                    <span className="value">
+                      {Math.round(
+                        data.oxygenLevel.history.reduce((acc: number, curr: any) => acc + curr.value, 0) / 
+                        Math.max(1, data.oxygenLevel.history.length)
+                      )}%
+                    </span>
+                  </div>
+                  
+                  <div className="stat-item">
+                    <span className="label">최고 위험도</span>
+                    <span className="value">
+                      {Math.max(0, ...data.riskLevel.history.map((item: any) => item.value))}%
+                    </span>
+                  </div>
+                  
+                  <div className="stat-item">
+                    <span className="label">마지막 측정</span>
+                    <span className="value">
+                      {data.heartRate.history.length > 0 
+                        ? new Date(data.heartRate.history[data.heartRate.history.length - 1].timestamp).toLocaleTimeString() 
+                        : '측정 없음'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+          
+          export default HealthStats;
+          EOF
+          
+          cat > client/src/components/common/StatusIndicator.tsx << 'EOF'
+          import React from 'react';
+          
+          interface StatusIndicatorProps {
+            riskLevel: number;
+          }
+          
+          const StatusIndicator: React.FC<StatusIndicatorProps> = ({ riskLevel }) => {
+            let status = 'normal';
+            let message = '정상';
+            
+            if (riskLevel > 50) {
+              status = 'danger';
+              message = '긴급 조치 필요';
+            } else if (riskLevel > 20) {
+              status = 'warning';
+              message = '주의 필요';
+            }
+            
+            return (
+              <div className={`status-indicator ${status}`}>
+                <div className="indicator-icon">
+                  {status === 'normal' && <i className="fas fa-check-circle"></i>}
+                  {status === 'warning' && <i className="fas fa-exclamation-triangle"></i>}
+                  {status === 'danger' && <i className="fas fa-exclamation-circle"></i>}
+                </div>
+                <div className="indicator-text">
+                  <h3>현재 상태: {message}</h3>
+                  <p>위험도: {riskLevel}%</p>
+                </div>
+              </div>
+            );
+          };
+          
+          export default StatusIndicator;
+          EOF
+          
+          cat > client/src/components/common/index.ts << 'EOF'
+          export { default as HealthCard } from './HealthCard';
+          export { default as HealthStats } from './HealthStats';
+          export { default as StatusIndicator } from './StatusIndicator';
+          EOF
+      
+      - name: Install chart.js
+        run: |
+          cd client
+          npm install chart.js react-chartjs-2
+      
+      - name: Commit changes
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git commit -m "📊 Implement home dashboard with health graphs" || echo "No changes to commit"
+      
+      - name: Push to feature branch
+        run: git push -f origin ${{ env.BRANCH_NAME }}
+      
+      - name: Create PR to main
+        id: create-pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.BRANCH_NAME }}
+          base: main
+          title: "📊 홈 대시보드 및 건강 그래프 구현"
+          body: |
+            이 PR은 다음 기능을 추가합니다:
+            
+            - 홈 대시보드 컴포넌트 구현
+            - 실시간 건강 지표 차트 구현
+            - Line, Bar, Pie 차트 컴포넌트
+            - 상태 표시 카드 컴포넌트
+            
+            자동으로 생성된 PR입니다.
+          delete-branch: true
+          draft: false
+      
+      - name: Auto-merge PR if enabled
+        if: steps.create-pr.outputs.pull-request-operation == 'created' && (github.event.client_payload.auto_merge == true || github.event.inputs.auto_merge == 'true')
+        run: |
+          PR_NUMBER=$(echo '${{ steps.create-pr.outputs.pull-request-number }}')
+          gh pr merge ${PR_NUMBER} --merge --delete-branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Trigger next pipeline
+        if: success() && (github.event.client_payload.auto_merge == true || github.event.inputs.auto_merge == 'true')
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: trigger-pipeline-websocket
+          client-payload: '{"auto_merge": true}' 

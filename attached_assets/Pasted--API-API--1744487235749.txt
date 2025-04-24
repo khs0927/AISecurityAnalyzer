@@ -1,0 +1,198 @@
+# 카카오맵 API와 병원 데이터 표시 문제 분석 및 해결 방법
+
+현재 카카오맵 API를 사용하여 병원 정보를 지도에 표시하는 과정에서 문제가 발생한 것으로 보입니다. 코드 검토 없이 일반적인 문제점과 해결책을 제시해 드리겠습니다.
+
+## 주요 문제 가능성
+
+### 1. 카카오맵 API 로딩 관련 문제
+
+카카오맵 API는 비동기적으로 로딩되므로 API가 완전히 로드되기 전에 지도 초기화 코드가 실행되면 오류가 발생합니다.
+
+```javascript
+// 잘못된 방식
+const script = document.createElement('script');
+script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=발급받은키";
+document.head.appendChild(script);
+
+// 바로 사용하면 오류 발생
+const map = new kakao.maps.Map(mapContainer, options); // 오류!
+```
+
+### 2. 병원 API 데이터 처리 문제
+
+병원 API의 응답 데이터를 올바르게 받아오지 못하거나, 받아온 데이터를 지도에 표시하는 과정에서 오류가 발생할 수 있습니다.
+
+```javascript
+// 예: 데이터 형식이 다른 경우
+const hospitals = await fetchHospitals();
+hospitals.forEach(hospital => {
+  // 데이터 구조가 예상과 다르면 오류 발생
+  const position = new kakao.maps.LatLng(hospital.lat, hospital.lng);
+  // ...
+});
+```
+
+### 3. 마커 표시 문제
+
+마커 객체를 생성했지만 지도에 추가하는 과정(setMap)이 누락되었거나, 좌표 값에 문제가 있을 수 있습니다.
+
+## 해결 방법
+
+### 1. 카카오맵 API 로딩 순서 수정
+
+API가 완전히 로드된 후에 지도를 초기화하도록 코드를 수정합니다.
+
+```javascript
+// 올바른 방식
+const script = document.createElement('script');
+script.type = "text/javascript";
+script.src = "//dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=발급받은키";
+
+script.onload = function() {
+  kakao.maps.load(() => {
+    // 여기서 지도 초기화 및 병원 데이터 로드
+    const container = document.getElementById('map');
+    const options = {
+      center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 중심
+      level: 5
+    };
+    const map = new kakao.maps.Map(container, options);
+    
+    // 병원 데이터 로드 및 마커 표시
+    loadHospitalData(map);
+  });
+};
+
+document.head.appendChild(script);
+```
+
+### 2. 병원 API 데이터 요청 및 처리 확인
+
+네트워크 요청을 확인하고 데이터 형식을 검증합니다.
+
+```javascript
+async function loadHospitalData(map) {
+  try {
+    // 현재 위치 또는 중심 좌표 가져오기
+    const center = map.getCenter();
+    const lat = center.getLat();
+    const lng = center.getLng();
+    
+    // API 호출
+    const response = await fetch(`/api/hospitals/nearby?lat=${lat}&lng=${lng}`);
+    
+    if (!response.ok) throw new Error('병원 데이터를 불러오는데 실패했습니다');
+    
+    const data = await response.json();
+    console.log('병원 데이터:', data); // 데이터 구조 확인
+    
+    // 병원 마커 표시
+    if (data.hospitals && data.hospitals.length > 0) {
+      data.hospitals.forEach(hospital => {
+        // 유효한 좌표 값인지 확인
+        if (hospital.lat && hospital.lng) {
+          const position = new kakao.maps.LatLng(hospital.lat, hospital.lng);
+          const marker = new kakao.maps.Marker({
+            map: map, // 지도에 마커 직접 추가
+            position: position,
+            title: hospital.name
+          });
+          
+          // 정보창 추가 (선택 사항)
+          const infoContent = `
+            
+              ${hospital.name}
+              ${hospital.address}
+              전화: ${hospital.tel || '정보 없음'}
+            
+          `;
+          
+          const infowindow = new kakao.maps.InfoWindow({
+            content: infoContent
+          });
+          
+          kakao.maps.event.addListener(marker, 'click', function() {
+            infowindow.open(map, marker);
+          });
+        } else {
+          console.error('병원 데이터에 유효한 좌표가 없습니다:', hospital);
+        }
+      });
+    } else {
+      console.warn('표시할 병원 데이터가 없습니다.');
+    }
+  } catch (error) {
+    console.error('병원 데이터 로드 오류:', error);
+  }
+}
+```
+
+### 3. 추가 디버깅 방법
+
+브라우저 콘솔에서 오류 메시지를 확인하고, 네트워크 탭에서 API 요청이 제대로 이루어지는지 검증합니다:
+
+1. 브라우저 개발자 도구 열기 (F12)
+2. 콘솔 탭에서 오류 메시지 확인
+3. 네트워크 탭에서 병원 API 요청/응답 확인
+4. 지도 영역이 제대로 설정되어 있는지 확인 (CSS 크기 등)
+
+## 참고: 라이브러리 사용 방법
+
+React나 Vue 등의 프레임워크를 사용 중이라면, 카카오맵 전용 라이브러리 사용을 고려해보세요:
+
+- React: `react-kakao-maps-sdk` 라이브러리 사용[8]
+- Vue: 컴포넌트 내 스크립트 로딩 방식 적용[7]
+
+라이브러리를 사용하면 비동기 로딩 및 컴포넌트 라이프사이클과의 통합이 더 쉽습니다.
+
+```jsx
+// React + react-kakao-maps-sdk 예시
+import { Map, MapMarker, useKakaoLoader } from 'react-kakao-maps-sdk';
+
+export default function HospitalMap() {
+  const [loading, error] = useKakaoLoader({
+    appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY,
+  });
+  
+  if (loading) return 지도를 불러오는 중...;
+  if (error) return 지도 로딩 오류;
+  
+  return (
+    
+      {hospitals.map(hospital => (
+        
+          {hospital.name}
+        
+      ))}
+    
+  );
+}
+```
+
+위 내용을 바탕으로 코드를 검토하시고, 문제가 지속되면 구체적인 오류 메시지와 함께 추가 질문해 주시면 더 정확한 도움을 드릴 수 있습니다.
+
+Citations:
+[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/53686762/3d2d5fe1-bda3-4085-b293-27d594fb9d0b/paste.txt
+[2] https://stackoverflow.com/questions/58628989/custom-marker-missing-sometimes
+[3] https://velog.io/@dhktjr0204/Error-%EC%B9%B4%EC%B9%B4%EC%98%A4-%EB%A7%B5-%EB%8F%99%EC%A0%81-%EB%A1%9C%EB%94%A9
+[4] https://learn.microsoft.com/en-us/dynamics365/industry/healthcare/use-data-integration-toolkit-maps
+[5] https://blog.naver.com/comingdown/222505513666
+[6] https://velog.io/@duddlfkd02/KakaoMap-API-%EB%A1%9C%EB%93%9C-%ED%8A%B8%EB%9F%AC%EB%B8%94%EC%8A%88%ED%8C%85
+[7] https://velog.io/@nicecarrot/Kakao-Map-API-%EB%9D%84%EC%9A%B0%EA%B8%B0
+[8] https://weeeeey.tistory.com/168
+[9] https://github.com/wazuh/wazuh/issues/18469
+[10] https://apis.map.kakao.com/web/sample/staticMapWithMarkerText/
+[11] https://developers.kakao.com/docs/latest/en/rest-api/getting-started
+[12] https://github.com/JaeSeoKim/react-kakao-maps-sdk
+[13] https://capri.tistory.com/entry/nextjs-kakao-map-api-%EC%82%AC%EC%9A%A9-%EC%A4%91-cross-origin-error
+[14] https://developers.google.com/maps/documentation/javascript/place-autocomplete
+[15] https://apis.map.kakao.com/web/sample/basicMarker/
+[16] https://developers.kakao.com/docs/latest/en/local/common
+[17] https://devtalk.kakao.com/t/topic/104092
+[18] https://developers.kakao.com/docs/latest/en/kakaomap/common
+[19] https://stackoverflow.com/questions/33971717/mapactivity-query-for-nearest-hospital-restaurant-not-working
+[20] https://velog.io/@identity230c/kakao-map-api-%EC%82%AC%EC%9A%A9%ED%95%98%EA%B8%B0
+[21] https://developers.kakao.com/docs/latest/en/kakaologin/rest-api
+
+---
+Perplexity로부터의 답변: pplx.ai/share

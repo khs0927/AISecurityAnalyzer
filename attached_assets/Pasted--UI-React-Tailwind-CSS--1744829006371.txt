@@ -1,0 +1,1035 @@
+# 심장 건강 모니터링 대시보드 UI 구현
+
+첨부하신 이미지들을 바탕으로 세련된 심장 건강 모니터링 대시보드를 React와 Tailwind CSS를 사용하여 구현했습니다. 심전도 측정, 위험도 분석, 건강기록 통합 분석을 위한 최신 디자인 요소를 적용했습니다.
+
+## 전체 프로젝트 구조
+
+```jsx
+// DashboardLayout.jsx - 메인 레이아웃 컴포넌트
+import { useState } from 'react';
+import MonitoringAnalysis from './components/MonitoringAnalysis';
+import RiskAnalysis from './components/RiskAnalysis';
+import HealthRecordAnalysis from './components/HealthRecordAnalysis';
+import HeartHealthScore from './components/HeartHealthScore';
+
+const DashboardLayout = () => {
+  const [activeTab, setActiveTab] = useState('monitoring');
+
+  return (
+    
+      
+        
+          심장 건강 모니터링 시스템
+          
+            김민수님
+            
+              MS
+            
+          
+        
+        
+        {/* 탭 네비게이션 */}
+        
+          
+             setActiveTab('monitoring')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'monitoring' 
+                  ? 'border-red-500 text-red-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              모니터링 분석
+            
+             setActiveTab('risk')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'risk' 
+                  ? 'border-red-500 text-red-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              위험도 분석
+            
+             setActiveTab('health')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'health' 
+                  ? 'border-red-500 text-red-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              건강기록 분석
+            
+          
+        
+        
+        {/* 심장 건강 점수 요약 - 항상 표시 */}
+        
+        
+        {/* 탭 콘텐츠 */}
+        
+          {activeTab === 'monitoring' && }
+          {activeTab === 'risk' && }
+          {activeTab === 'health' && }
+        
+      
+    
+  );
+};
+
+export default DashboardLayout;
+```
+
+## 1. 모니터링 분석 컴포넌트
+
+ECG, 산소포화도, 심박수를 통합하여 표시하는 세련된 모니터링 분석 섹션입니다.
+
+```jsx
+// components/MonitoringAnalysis.jsx
+import { useState, useEffect, useRef } from 'react';
+import { Heart, Activity, Droplet } from 'lucide-react';
+
+const MonitoringAnalysis = () => {
+  const [healthData, setHealthData] = useState({
+    heartRate: 78,
+    oxygenLevel: 98,
+    bloodPressure: '125/82',
+    ecgStatus: 'normal' // 'normal', 'warning', 'critical'
+  });
+  
+  const ecgCanvasRef = useRef(null);
+  const [isMonitoring, setIsMonitoring] = useState(true);
+  
+  // ECG 시뮬레이션
+  useEffect(() => {
+    if (!ecgCanvasRef.current || !isMonitoring) return;
+    
+    const canvas = ecgCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    // 캔버스 크기 설정
+    const setCanvasSize = () => {
+      const container = canvas.parentElement;
+      canvas.width = container.offsetWidth;
+      canvas.height = container.offsetHeight;
+    };
+    
+    setCanvasSize();
+    window.addEventListener('resize', setCanvasSize);
+    
+    // ECG 패턴 데이터 (정상, 빠른 심박수, ST 상승 패턴)
+    const ecgPatterns = {
+      normal: [0, 0.1, 0.2, 0.1, 0, 0, -0.1, 1.5, -0.5, 0.2, 0.3, 0.2, 0, 0, 0],
+      tachycardia: [0, 0.2, 0.3, 0.2, 0, 0, -0.2, 1.8, -0.8, 0.3, 0.4, 0.2, 0, 0, 0],
+      stElevation: [0, 0.1, 0.2, 0.3, 0.4, 0.4, 0.3, 1.5, -0.5, 0.5, 0.6, 0.5, 0.4, 0.3, 0]
+    };
+    
+    // 선택된 패턴 결정
+    let pattern = ecgPatterns.normal;
+    if (healthData.ecgStatus === 'warning') {
+      pattern = ecgPatterns.tachycardia;
+    } else if (healthData.ecgStatus === 'critical') {
+      pattern = ecgPatterns.stElevation;
+    }
+    
+    let point = 0;
+    let offset = 0;
+    
+    // ECG 그리기 함수
+    const drawECG = () => {
+      if (!isMonitoring) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 배경 그리드 그리기
+      ctx.beginPath();
+      ctx.strokeStyle = '#f0f0f0';
+      
+      // 수직 그리드 라인
+      for (let x = 0; x  {
+      window.removeEventListener('resize', setCanvasSize);
+      cancelAnimationFrame(animation);
+    };
+  }, [isMonitoring, healthData.ecgStatus]);
+  
+  const getStatusClass = () => {
+    switch (healthData.ecgStatus) {
+      case 'normal': return 'bg-green-100 text-green-700';
+      case 'warning': return 'bg-yellow-100 text-yellow-700';
+      case 'critical': return 'bg-red-100 text-red-700';
+      default: return 'bg-green-100 text-green-700';
+    }
+  };
+  
+  const getStatusText = () => {
+    switch (healthData.ecgStatus) {
+      case 'normal': return '정상';
+      case 'warning': return '주의';
+      case 'critical': return '위험';
+      default: return '정상';
+    }
+  };
+  
+  const handleToggleMonitoring = () => {
+    setIsMonitoring(!isMonitoring);
+  };
+  
+  return (
+    
+      
+        {/* 상태 개요 카드 */}
+        
+          
+            모니터링 분석
+            
+              최근 업데이트: 5분 전
+              
+                {getStatusText()}
+              
+            
+          
+          
+          
+            {/* 심박수 */}
+            
+              
+                
+              
+              
+                심박수
+                {healthData.heartRate} BPM
+              
+            
+            
+            {/* 산소포화도 */}
+            
+              
+                
+              
+              
+                산소포화도
+                {healthData.oxygenLevel}%
+              
+            
+            
+            {/* 혈압 */}
+            
+              
+                
+              
+              
+                혈압
+                {healthData.bloodPressure}
+              
+            
+          
+        
+        
+        {/* ECG 그래프 */}
+        
+          
+            실시간 ECG
+            
+              {isMonitoring ? '모니터링 중' : '시작하기'}
+            
+          
+          
+          
+            
+            
+            {!isMonitoring && (
+              
+                모니터링을 시작하려면 시작하기 버튼을 클릭하세요
+              
+            )}
+          
+          
+          
+            
+              
+              정상 리듬
+            
+            
+              
+              빠른 심박
+            
+            
+              
+              ST 상승
+            
+          
+        
+      
+    
+  );
+};
+
+export default MonitoringAnalysis;
+```
+
+## 2. 위험도 분석 컴포넌트
+
+복용 약물 및 위험 요소를 분석하여 테이블 형태로 표시합니다.
+
+```jsx
+// components/RiskAnalysis.jsx
+import { BarChart, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+
+const RiskAnalysis = () => {
+  // 샘플 위험 요소 데이터
+  const riskFactors = [
+    { id: 1, name: '흡연', status: 'low', value: '비흡연', impact: '낮음' },
+    { id: 2, name: '고혈압', status: 'medium', value: '130/85', impact: '중간' },
+    { id: 3, name: '당뇨', status: 'low', value: '정상', impact: '낮음' },
+    { id: 4, name: '고지혈증', status: 'high', value: 'LDL 150', impact: '높음' },
+    { id: 5, name: '심장질환 가족력', status: 'medium', value: '있음', impact: '중간' },
+    { id: 6, name: '수면장애', status: 'high', value: '5시간 미만', impact: '높음' },
+    { id: 7, name: '운동부족', status: 'medium', value: '주 1-2회', impact: '중간' }
+  ];
+  
+  // 샘플 약물 데이터
+  const medications = [
+    { id: 1, name: '아스피린', dosage: '100mg', frequency: '1회/일', impact: '낮음', status: 'positive' },
+    { id: 2, name: '아토르바스타틴', dosage: '20mg', frequency: '1회/일', impact: '중간', status: 'positive' },
+    { id: 3, name: '심바스타틴', dosage: '40mg', frequency: '1회/일', impact: '높음', status: 'negative' }
+  ];
+  
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'low': return 'bg-green-100 text-green-700';
+      case 'medium': return 'bg-yellow-100 text-yellow-700';
+      case 'high': return 'bg-red-100 text-red-700';
+      case 'positive': return 'bg-green-100 text-green-700';
+      case 'negative': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+  
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'low':
+      case 'positive':
+        return ;
+      case 'medium':
+        return ;
+      case 'high':
+      case 'negative':
+        return ;
+      default:
+        return null;
+    }
+  };
+  
+  // 종합 위험도 계산 (샘플)
+  const calculateOverallRisk = () => {
+    const highCount = riskFactors.filter(factor => factor.status === 'high').length;
+    const mediumCount = riskFactors.filter(factor => factor.status === 'medium').length;
+    
+    if (highCount >= 2) return { level: 'high', percentage: 75 };
+    if (highCount === 1 || mediumCount >= 3) return { level: 'medium', percentage: 45 };
+    return { level: 'low', percentage: 20 };
+  };
+  
+  const overallRisk = calculateOverallRisk();
+  
+  return (
+    
+      {/* 종합 위험도 */}
+      
+        
+          종합 위험도 분석
+          
+            {overallRisk.level === 'high' ? '높음' :
+             overallRisk.level === 'medium' ? '중간' : '낮음'}
+          
+        
+        
+        
+          {/* 위험도 그래프 */}
+          
+            
+              
+                {/* 배경 원 */}
+                
+                {/* 진행 원 */}
+                
+                {/* 텍스트 */}
+                
+                  {overallRisk.percentage}%
+                
+              
+              
+                
+                  {overallRisk.percentage}%
+                  위험도
+                
+              
+            
+          
+          
+          {/* 위험도 요약 */}
+          
+            주요 위험 요소
+            
+              {riskFactors
+                .filter(factor => factor.status === 'high')
+                .map(factor => (
+                  
+                    
+                    {factor.name}: {factor.value}
+                  
+                ))}
+              {riskFactors
+                .filter(factor => factor.status === 'medium')
+                .slice(0, 2)
+                .map(factor => (
+                  
+                    
+                    {factor.name}: {factor.value}
+                  
+                ))}
+            
+            
+            약물 상호작용
+            {medications
+              .filter(med => med.status === 'negative')
+              .map(med => (
+                
+                  {med.name} ({med.dosage})
+                  심혈관 위험 증가 가능성
+                
+              ))}
+          
+        
+      
+      
+      {/* 위험 요소 테이블 */}
+      
+        위험 요소 분석
+        
+          
+            
+              
+                요소
+                상태
+                측정값
+                영향도
+              
+            
+            
+              {riskFactors.map(factor => (
+                
+                  
+                    {factor.name}
+                  
+                  
+                    
+                      {getStatusIcon(factor.status)}
+                      
+                        {factor.status === 'low' ? '양호' : 
+                         factor.status === 'medium' ? '주의' : '위험'}
+                      
+                    
+                  
+                  
+                    {factor.value}
+                  
+                  
+                    {factor.impact}
+                  
+                
+              ))}
+            
+          
+        
+      
+      
+      {/* 약물 분석 */}
+      
+        복용 약물 분석
+        
+          
+            
+              
+                약물명
+                용량
+                복용법
+                심장 영향
+              
+            
+            
+              {medications.map(med => (
+                
+                  
+                    {med.name}
+                  
+                  
+                    {med.dosage}
+                  
+                  
+                    {med.frequency}
+                  
+                  
+                    
+                      {getStatusIcon(med.status)}
+                      {med.impact}
+                    
+                  
+                
+              ))}
+            
+          
+        
+      
+    
+  );
+};
+
+export default RiskAnalysis;
+```
+
+## 3. 건강기록 분석 컴포넌트
+
+심박수, 심전도, 산소포화도와 수면, 활동 데이터를 결합한 종합 분석을 보여줍니다.
+
+```jsx
+// components/HealthRecordAnalysis.jsx
+import { useState } from 'react';
+import { Heart, Clock, Activity, Moon, Coffee, Calendar } from 'lucide-react';
+
+const HealthRecordAnalysis = () => {
+  const [timeRange, setTimeRange] = useState('week');
+  
+  // 샘플 차트 데이터
+  const heartRateData = {
+    day: [72, 75, 68, 70, 74, 76, 73, 75, 72, 70, 69, 72],
+    week: [72, 74, 73, 71, 75, 76, 72],
+    month: [72, 73, 74, 75, 73, 72, 71, 70, 72, 73, 74, 75, 76, 75, 74, 72, 71, 73, 74, 75, 74, 72, 70, 71, 73, 75, 74, 73, 72, 71]
+  };
+  
+  const oxygenLevelData = {
+    day: [98, 97, 98, 98, 97, 99, 98, 97, 98, 98, 97, 98],
+    week: [98, 97, 98, 99, 98, 97, 98],
+    month: [98, 98, 97, 98, 99, 98, 97, 98, 98, 97, 98, 99, 98, 97, 98, 98, 97, 98, 99, 98, 97, 98, 98, 97, 98, 99, 98, 97, 98, 98]
+  };
+  
+  const sleepData = {
+    day: [7.5],
+    week: [6.5, 7, 7.5, 8, 6, 7.5, 7],
+    month: [7, 6.5, 7, 7.5, 8, 6, 7.5, 7, 7, 6.5, 7, 7.5, 8, 6, 7.5, 7, 7, 6.5, 7, 7.5, 8, 6, 7.5, 7, 7, 6.5, 7, 7.5, 8, 6]
+  };
+  
+  const activityData = {
+    day: [2500, 3000, 3500, 4000, 3800, 2900, 2700, 3200, 3600, 3800, 3500, 3000],
+    week: [3200, 4500, 2800, 5000, 3200, 6000, 3800],
+    month: [3200, 3500, 4000, 4500, 3200, 2800, 3500, 3800, 4200, 3800, 3600, 3900, 4100, 3700, 3200, 3800, 4000, 4200, 3800, 3600, 3900, 4100, 3700, 3200, 3800, 4000, 4200, 3800, 3600, 3300]
+  };
+  
+  // 시간대별 라벨
+  const timeLabels = {
+    day: ['8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM', '7PM'],
+    week: ['월', '화', '수', '목', '금', '토', '일'],
+    month: [...Array(30)].map((_, i) => `${i + 1}일`)
+  };
+  
+  // 건강 인사이트 데이터
+  const insights = [
+    { id: 1, title: '심박수 변동', description: '지난 주 대비 2% 증가했습니다. 정상 범위 내에 있습니다.', icon: , trend: 'up', value: '+2%' },
+    { id: 2, title: '수면 품질', description: '깊은 수면 시간이 증가했습니다. 수면의 질이 향상되고 있습니다.', icon: , trend: 'up', value: '+8%' },
+    { id: 3, title: '신체 활동', description: '지난 주보다 활동량이 감소했습니다. 더 많은 운동을 권장합니다.', icon: , trend: 'down', value: '-15%' },
+    { id: 4, title: '카페인 섭취', description: '카페인 섭취가 감소했습니다. 심박 변동성에 긍정적 영향을 줍니다.', icon: , trend: 'down', value: '-20%' }
+  ];
+  
+  // 선택된 데이터 세트
+  const selectedHeartRateData = heartRateData[timeRange];
+  const selectedOxygenLevelData = oxygenLevelData[timeRange];
+  const selectedSleepData = sleepData[timeRange];
+  const selectedActivityData = activityData[timeRange];
+  const selectedLabels = timeLabels[timeRange];
+  
+  // 라인 차트 렌더링
+  const renderLineChart = (data, color, height = 100) => {
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+    
+    const points = data.map((value, index) => {
+      // 데이터 포인트의 x, y 좌표 계산
+      const x = (index / (data.length - 1)) * 100;
+      const y = 100 - ((value - min) / range) * 90;
+      return `${x},${y}`;
+    }).join(' ');
+    
+    return (
+      
+        {/* 가로 그리드 라인 */}
+        {[0, 25, 50, 75, 100].map(y => (
+          
+        ))}
+        
+        {/* 세로 그리드 라인 */}
+        {data.map((_, index) => {
+          const x = (index / (data.length - 1)) * 100;
+          return (
+            
+          );
+        })}
+        
+        {/* 선 그래프 */}
+        
+        
+        {/* 데이터 포인트 */}
+        {data.map((value, index) => {
+          const x = (index / (data.length - 1)) * 100;
+          const y = 100 - ((value - min) / range) * 90;
+          return (
+            
+          );
+        })}
+      
+    );
+  };
+  
+  // 종합 건강 점수 계산
+  const calculateHealthScore = () => {
+    // 실제로는 더 복잡한 알고리즘이 적용되겠지만, 여기서는 간단히 계산
+    const heartRateAvg = selectedHeartRateData.reduce((sum, val) => sum + val, 0) / selectedHeartRateData.length;
+    const sleepAvg = selectedSleepData.reduce((sum, val) => sum + val, 0) / selectedSleepData.length;
+    const activityAvg = selectedActivityData.reduce((sum, val) => sum + val, 0) / selectedActivityData.length;
+    
+    // 각 지표의 이상적인 값을 기준으로 점수 계산 (0-100)
+    const heartRateScore = Math.min(100, 100 - Math.abs(heartRateAvg - 70) * 2); // 70bpm을 이상적으로 가정
+    const sleepScore = Math.min(100, sleepAvg / 8 * 100); // 8시간을 이상적으로 가정
+    const activityScore = Math.min(100, activityAvg / 10000 * 100); // 10000걸음을 이상적으로 가정
+    
+    // 종합 점수 (가중치 적용 가능)
+    const overallScore = Math.round((heartRateScore * 0.4 + sleepScore * 0.3 + activityScore * 0.3));
+    
+    return {
+      overall: overallScore,
+      heart: Math.round(heartRateScore),
+      sleep: Math.round(sleepScore),
+      activity: Math.round(activityScore)
+    };
+  };
+  
+  const healthScore = calculateHealthScore();
+  
+  return (
+    
+      {/* 시간 범위 선택 */}
+      
+        
+          건강기록 분석
+          
+             setTimeRange('day')}
+            >
+              오늘
+            
+             setTimeRange('week')}
+            >
+              이번 주
+            
+             setTimeRange('month')}
+            >
+              이번 달
+            
+          
+        
+        
+        
+          {/* 심박수 차트 */}
+          
+            
+              
+              심박수
+            
+            
+              {renderLineChart(selectedHeartRateData, '#ef4444', 40)}
+            
+            
+              {selectedLabels.filter((_, i) => i % Math.ceil(selectedLabels.length / 5) === 0).map((label, i) => (
+                {label}
+              ))}
+            
+          
+          
+          {/* 산소포화도 차트 */}
+          
+            
+              
+              산소포화도
+            
+            
+              {renderLineChart(selectedOxygenLevelData, '#3b82f6', 40)}
+            
+            
+              {selectedLabels.filter((_, i) => i % Math.ceil(selectedLabels.length / 5) === 0).map((label, i) => (
+                {label}
+              ))}
+            
+          
+          
+          {/* 수면 차트 */}
+          
+            
+              
+              수면
+            
+            
+              {renderLineChart(selectedSleepData, '#6366f1', 40)}
+            
+            
+              {selectedLabels.filter((_, i) => i % Math.ceil(selectedLabels.length / 5) === 0).map((label, i) => (
+                {label}
+              ))}
+            
+          
+          
+          {/* 활동량 차트 */}
+          
+            
+              
+              활동량
+            
+            
+              {renderLineChart(selectedActivityData, '#10b981', 40)}
+            
+            
+              {selectedLabels.filter((_, i) => i % Math.ceil(selectedLabels.length / 5) === 0).map((label, i) => (
+                {label}
+              ))}
+            
+          
+        
+      
+      
+      {/* 건강 인사이트 */}
+      
+        건강 인사이트
+        
+          {insights.map(insight => (
+            
+              
+                {insight.icon}
+              
+              
+                
+                  {insight.title}
+                  
+                    {insight.value}
+                  
+                
+                {insight.description}
+              
+            
+          ))}
+        
+      
+      
+      {/* 건강 점수 카드 */}
+      
+        건강 점수 분석
+        
+          
+            {healthScore.overall}
+            종합 건강 점수
+            
+              {healthScore.overall >= 80 ? '매우 좋음' : 
+               healthScore.overall >= 60 ? '좋음' : 
+               healthScore.overall >= 40 ? '보통' : '주의 필요'}
+            
+          
+          
+          
+            
+              
+                
+                {healthScore.heart}
+                심장 건강
+              
+              
+              
+                
+                {healthScore.sleep}
+                수면 건강
+              
+              
+              
+                
+                {healthScore.activity}
+                활동 건강
+              
+            
+          
+        
+      
+    
+  );
+};
+
+export default HealthRecordAnalysis;
+```
+
+## 4. 심장 건강 점수 컴포넌트
+
+종합적인 심장 건강 점수를 보여주는 컴포넌트입니다.
+
+```jsx
+// components/HeartHealthScore.jsx
+import { Heart } from 'lucide-react';
+
+const HeartHealthScore = () => {
+  // 샘플 건강 점수
+  const score = 78;
+  
+  const getScoreText = () => {
+    if (score >= 80) return '매우 좋음';
+    if (score >= 70) return '좋음';
+    if (score >= 60) return '보통';
+    if (score >= 50) return '주의';
+    return '위험';
+  };
+  
+  const getScoreColor = () => {
+    if (score >= 80) return 'from-green-400 to-green-600';
+    if (score >= 70) return 'from-blue-400 to-blue-600';
+    if (score >= 60) return 'from-yellow-400 to-yellow-600';
+    if (score >= 50) return 'from-orange-400 to-orange-600';
+    return 'from-red-400 to-red-600';
+  };
+  
+  return (
+    
+      
+        {/* 점수 시각화 */}
+        
+          
+            
+              {/* 배경 원 */}
+              
+              {/* 진행 원 */}
+              
+              {/* 하트 아이콘 */}
+              
+                
+                  
+                
+              
+              {/* 점수 텍스트 */}
+              
+                {score}점
+              
+            
+          
+          
+            심장 건강 점수
+            {getScoreText()}
+          
+        
+        
+        {/* 건강 요약 */}
+        
+          심장 건강 요약
+          
+            
+              심박수
+              
+                72
+                
+                  정상
+                
+              
+            
+            
+            
+              산소포화도
+              
+                98%
+                
+                  정상
+                
+              
+            
+            
+            
+              혈압
+              
+                125/82
+                
+                  경계
+                
+              
+            
+          
+          
+          
+            개선 권장사항
+            
+              
+                
+                고지혈증 관리를 위한 식이요법 유지
+              
+              
+                
+                주 3-4회, 30분 이상의 유산소 운동 권장
+              
+              
+                
+                스트레스 관리 및 충분한 수면 취하기
+              
+            
+          
+        
+      
+    
+  );
+};
+
+export default HeartHealthScore;
+```
+
+## 전체 스타일 정의 (Tailwind CSS)
+
+Tailwind CSS 설정을 커스터마이징하고 일부 추가 스타일을 정의합니다.
+
+```js
+// tailwind.config.js
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        red: {
+          50: '#FFF5F5',
+          100: '#FFE2E2',
+          200: '#FCCACA',
+          300: '#F99B9B',
+          400: '#F76D6D',
+          500: '#FF2C2C',
+          600: '#E50000',
+          700: '#C20000',
+          800: '#A10000',
+          900: '#800000',
+        },
+      },
+      fontFamily: {
+        sans: ['Pretendard', 'sans-serif'],
+      },
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+```css
+/* index.css */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.6/dist/web/static/pretendard.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  background-color: #f9fafb;
+}
+
+/* ECG 라인 애니메이션 */
+@keyframes ecgPulse {
+  0% {
+    stroke-opacity: 0.9;
+  }
+  50% {
+    stroke-opacity: 1;
+  }
+  100% {
+    stroke-opacity: 0.9;
+  }
+}
+
+.ecg-line {
+  animation: ecgPulse 1.5s infinite;
+}
+
+/* 그래디언트 배경 애니메이션 */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: gradient 5s ease infinite;
+}
+```
+
+## 사용 방법
+
+이 코드를 사용하여 심장 건강 모니터링 대시보드를 구현할 수 있습니다. 주요 기능은 다음과 같습니다:
+
+1. **모니터링 분석**: 심박수, 산소포화도, ECG 데이터를 실시간으로 시각화
+2. **위험도 분석**: 복용 약물과 개인 건강 위험 요소를 테이블 형태로 분석
+3. **건강기록 분석**: 심장 관련 지표, 수면, 활동량 등의 데이터를 종합적으로 분석
+4. **심장 건강 점수**: 모든 데이터를 종합한 전체 심장 건강 점수 표시
+
+이 UI는 모바일과 데스크톱 모두에서 반응형으로 작동하며, 심장 건강을 종합적으로 모니터링하고 분석하는 데 필요한 모든 기능을 제공합니다.
+
+Citations:
+[1] https://pplx-res.cloudinary.com/image/upload/v1744827244/user_uploads/uYUMriIHiHsyjHT/image.jpg
+[2] https://pplx-res.cloudinary.com/image/upload/v1744827449/user_uploads/xijjGyBaJIjquun/Free-Vector-_-Gradient-infographic-elements.jpg
+[3] https://pplx-res.cloudinary.com/image/upload/v1744827484/user_uploads/PhUTEzmzmOUCisr/image.jpg
+[4] https://pplx-res.cloudinary.com/image/upload/v1744827489/user_uploads/qGutATQDVzFIEbe/image.jpg
+[5] https://dribbble.com/tags/heart-rate-monitor
+[6] https://pmc.ncbi.nlm.nih.gov/articles/PMC11107323/
+[7] https://www.boldbi.com/dashboard-examples/healthcare/patient-monitoring-dashboard/
+[8] https://pmc.ncbi.nlm.nih.gov/articles/PMC11519570/
+[9] https://github.com/keetmalin/react-health-dashboard
+[10] https://www.reddit.com/r/learnprogramming/comments/xq1b75/reacttable_how_can_i_conditionally_style_color_of/
+[11] https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0237854
+[12] https://github.com/medipass/react-health-card
+[13] https://designtocodes.com/product/mindai-tailwind-health-monitoring-dashboard-for-healthcare/
+[14] https://dribbble.com/search/heart-rate-monitor
+[15] https://github.com/manticarodrigo/health-dashboard
+[16] https://www.figma.com/community/file/1325788113643212716/health-dashboard
+[17] https://themeforest.net/item/medux-medical-react-dashboard/41061766
+[18] https://www.behance.net/search/projects/health%20monitor
+[19] https://www.youtube.com/watch?v=ews3uu64MVw
+[20] https://www.vectorstock.com/royalty-free-vector/health-monitoring-dashboard-with-heart-activity-vector-55547902
+[21] https://pmc.ncbi.nlm.nih.gov/articles/PMC10731575/
+[22] https://elements.envato.com/graphic-templates/health+tracker+app
+[23] https://journals.sagepub.com/doi/10.1177/2048872619858285?icid=int.sj-full-text.similar-articles.1
+[24] https://www.gooddata.com/blog/healthcare-dashboards-examples-use-cases-and-benefits/
+[25] https://www.cdc.gov/pcd/issues/2022/22_0076.htm
+[26] https://aws.amazon.com/blogs/industries/multimodal-data-analysis-with-aws-health-and-machine-learning-services/
+[27] https://www.behance.net/search/projects/health%20monitor%20app
+[28] https://www.shutterstock.com/search/heart-risk-factors?image_type=illustration
+[29] https://www.spec-india.com/live-bi-visualization/patient-management-analytics-dashboard-for-hospitals
+[30] https://www.gehealthcare.co.uk/products/advanced-visualization/cardiology-advanced-visualization
+[31] https://academic.oup.com/jamia/article/31/2/298/7200062
+[32] https://www.shutterstock.com/search/dashboard-heart-patient?image_type=illustration
+[33] https://mui.com/store/collections/free-react-dashboard/
+[34] https://coreui.io/react/
+[35] https://github.com/TanStack/table/discussions/5384
+[36] https://www.scichart.com/blog/showcase-of-the-best-react-charts-and-graphs/
+[37] https://github.com/medipass/react-native-health-card
+[38] https://multipurposethemes.com/blog/designing-medical-webapp-with-tailwind-admin-template-rhythm-admin/
+[39] https://refine.dev/blog/react-admin-dashboard/
+[40] https://bigpicture.one/blog/project-risk-assessment-examples/
+[41] https://www.scichart.com/blog/improve-real-time-wpf-visualization-of-ecg-signals-with-scichart/
+[42] https://www.dhiwise.com/post/a-step-by-step-guide-to-building-react-scoreboard
+[43] https://www.codewithfaraz.com/article/189/25-tailwind-css-dashboard-template-examples
+[44] https://dev.to/tailwindcss/100-react-dashboard-components-to-use-in-2024-3ked
+
+---
+Perplexity로부터의 답변: pplx.ai/share

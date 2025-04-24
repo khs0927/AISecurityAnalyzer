@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HEART - 심장 건강 모니터링</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+  <link
+    rel="stylesheet"
+    as="style"
+    onload="this.rel='stylesheet'"
+    href="https://fonts.googleapis.com/css2?display=swap&amp;family=Manrope%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+  />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <style>
+    body {
+      font-family: 'Manrope', 'Noto Sans', sans-serif;
+      background-color: #F8FAFB;
+    }
+    
+    .card-with-shadow {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .badge {
+      border-radius: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-blue {
+      background-color: #e8eef3;
+      color: #2c90e2;
+    }
+
+    .badge-yellow {
+      background-color: #fff8e6;
+      color: #f59e0b;
+    }
+
+    .badge-red {
+      background-color: #fee2e2;
+      color: #ef4444;
+    }
+
+    .badge-green {
+      background-color: #dcfce7;
+      color: #10b981;
+    }
+
+    .primary-button {
+      background-color: #2c90e2;
+      color: white;
+      border-radius: 0.75rem;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .primary-button:hover {
+      background-color: #2276c0;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-lg">
+    <!-- 로고 및 앱 버전 -->
+    <div class="flex justify-between items-center mb-6">
+      <div class="flex items-center">
+        <div class="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-lg mr-3">
+          H
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-[#0e151b]">HEART</h1>
+          <p class="text-xs text-[#507695]">버전 3.0 - 멀티모달 심근경색 감지 엔진</p>
+        </div>
+      </div>
+      <div>
+        <span class="badge badge-blue">Multimodal-MCP v3.0.2</span>
+      </div>
+    </div>
+
+    <!-- 사용자/보호자 탭 -->
+    <div class="flex px-2 py-2 mb-4">
+      <div class="flex h-10 flex-1 items-center justify-center rounded-xl bg-[#e8eef3] p-1">
+        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-xl px-2 has-[:checked]:bg-[#f8fafb] has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#0e151b] text-[#507695] text-sm font-medium leading-normal">
+          <span class="truncate">사용자 모드</span>
+          <input type="radio" name="user-mode" class="invisible w-0" value="user" checked />
+        </label>
+        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-xl px-2 has-[:checked]:bg-[#f8fafb] has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#0e151b] text-[#507695] text-sm font-medium leading-normal">
+          <span class="truncate">보호자 모드</span>
+          <input type="radio" name="user-mode" class="invisible w-0" value="guardian" />
+        </label>
+      </div>
+    </div>
+
+    <!-- 사용자 모드 내용 -->
+    <div id="user-content">
+      <!-- 위험도 게이지 카드 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-bold text-[#0e151b]">심근경색 위험도</h2>
+          <a href="multimodal_risk_calculator.html" class="text-xs text-[#2c90e2] font-medium">자세히 보기</a>
+        </div>
+        
+        <div class="flex items-center">
+          <!-- 리스크 게이지 -->
+          <div class="relative w-24 h-24">
+            <svg viewBox="0 0 120 120" class="w-full h-full">
+              <!-- 배경 원 -->
+              <circle cx="60" cy="60" r="54" fill="none" stroke="#f0f0f0" stroke-width="12" />
+              
+              <!-- 리스크 표시 원호 -->
+              <circle 
+                cx="60" 
+                cy="60" 
+                r="54" 
+                fill="none" 
+                stroke="#2c90e2" 
+                stroke-width="12" 
+                stroke-dasharray="339.12" 
+                stroke-dashoffset="271.30"
+                transform="rotate(-90 60 60)"
+              />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-xl font-bold text-[#0e151b]">20%</span>
+              <span class="text-xs text-[#507695]">위험도</span>
+            </div>
+          </div>
+          
+          <!-- 위험도 설명 -->
+          <div class="ml-4 flex-1">
+            <div class="text-sm font-medium text-[#0e151b] mb-1">낮은 위험</div>
+            <p class="text-xs text-[#507695] mb-2">현재 특별한 조치가 필요하지 않습니다.</p>
+            <div class="flex flex-wrap gap-1">
+              <span class="badge badge-green">정상 심박수</span>
+              <span class="badge badge-blue">정상 ECG</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ECG 모니터링 카드 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-bold text-[#0e151b]">실시간 ECG 모니터링</h2>
+          <span class="badge badge-green">정상</span>
+        </div>
+        
+        <!-- ECG 그래프 -->
+        <div class="bg-[#f8fafb] rounded-xl p-3 mb-3">
+          <div class="h-20 w-full relative overflow-hidden">
+            <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none">
+              <path 
+                d="M0,50 
+                   L10,50 15,50 20,48 25,50 30,90 35,10 40,50 45,50 50,50 55,50 60,48 65,50 70,52 75,50 
+                   L80,50 85,50 90,50 95,48 100,50 105,90 110,10 115,50 120,50 125,50 130,50 135,48 140,50 
+                   L145,50 150,50 155,50 160,48 165,50 170,90 175,10 180,50 185,50 190,50 195,50 200,48 
+                   L205,50 210,52 215,50 220,50 225,50 230,50 235,48 240,50 245,90 250,10 255,50 260,50 
+                   L265,50 270,50 275,48 280,50 285,50 290,50 295,50 300,48 305,50 310,90 315,10 320,50 
+                   L325,50 330,50 335,50 340,48 345,50 350,52 355,50 360,50 365,50 370,50 375,48 380,50 
+                   L385,90 390,10 395,50 400,50"
+                fill="none" 
+                stroke="#2c90e2" 
+                stroke-width="2"
+              />
+            </svg>
+          </div>
+        </div>
+        
+        <!-- 상태 지표 -->
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="bg-[#f8fafb] p-3 rounded-xl text-center">
+            <div class="text-lg font-bold text-[#0e151b]">72</div>
+            <div class="text-xs text-[#507695]">심박수</div>
+          </div>
+          <div class="bg-[#f8fafb] p-3 rounded-xl text-center">
+            <div class="text-lg font-bold text-[#0e151b]">98%</div>
+            <div class="text-xs text-[#507695]">산소포화도</div>
+          </div>
+          <div class="bg-[#f8fafb] p-3 rounded-xl text-center">
+            <div class="text-lg font-bold text-[#0e151b]">36.5°</div>
+            <div class="text-xs text-[#507695]">체온</div>
+          </div>
+        </div>
+        
+        <!-- 작업 버튼 -->
+        <div class="flex gap-3">
+          <button class="primary-button flex-1 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            실시간 감지
+          </button>
+          <button class="border border-[#2c90e2] text-[#2c90e2] rounded-xl px-4 font-medium">
+            ECG 기록
+          </button>
+        </div>
+      </div>
+      
+      <!-- 멀티모달 분석 및 AI 상담 카드 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-bold text-[#0e151b]">멀티모달 데이터 분석</h2>
+          <span class="badge badge-blue">AI 분석</span>
+        </div>
+        
+        <p class="text-xs text-[#507695] mb-3">20,000개 이상의 사례 기반 멀티모달 AI 분석</p>
+        
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-center bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#2c90e2]" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <span class="text-sm text-[#0e151b] font-medium">심장 건강 자가 테스트</span>
+            </div>
+            <a href="health_test.html" class="text-xs text-[#2c90e2]">테스트 하기</a>
+          </div>
+          
+          <div class="flex justify-between items-center bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[#2c90e2]" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <span class="text-sm text-[#0e151b] font-medium">AI 의학 상담</span>
+            </div>
+            <button id="open-ai-chat" class="text-xs text-[#2c90e2]">상담 시작</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI 상담 플로팅 버튼 -->
+      <div class="fixed right-6 bottom-20 z-10">
+        <button id="floating-ai-button" class="w-14 h-14 rounded-full bg-[#2c90e2] shadow-lg flex items-center justify-center">
+          <div class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+              <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+            </svg>
+            <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border border-white"></span>
+          </div>
+        </button>
+      </div>
+      
+      <!-- 응급 상황 카드 -->
+      <div class="card-with-shadow p-5 mb-4 bg-red-50">
+        <h2 class="text-base font-bold text-red-600 mb-3">응급 상황</h2>
+        
+        <div class="flex gap-3 mb-3">
+          <button class="flex-1 bg-red-600 text-white py-3 rounded-xl font-medium text-sm">
+            119 응급 전화
+          </button>
+          <button class="flex-1 bg-white text-red-600 border border-red-600 py-3 rounded-xl font-medium text-sm">
+            보호자 연락
+          </button>
+        </div>
+        
+        <div class="text-xs text-red-600">
+          <p class="mb-1">심근경색 의심 증상:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>가슴 통증이나 압박감</li>
+            <li>어깨, 목, 턱으로 퍼지는 통증</li>
+            <li>호흡 곤란 및 구역질</li>
+            <li>식은땀 및 현기증</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 보호자 모드 내용 -->
+    <div id="guardian-content" class="hidden">
+      <!-- 모니터링 대상자 목록 카드 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="text-base font-bold text-[#0e151b] mb-4">모니터링 대상자</h2>
+        
+        <div class="space-y-3">
+          <!-- 사용자 1 (링크로 변경) -->
+          <a href="guardian_detail.html?user=user1" class="flex justify-between items-center bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                <span class="text-green-500 text-sm">안전</span>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-[#0e151b]">김철수</p>
+                <p class="text-xs text-[#507695]">마지막 업데이트: 2분 전</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-[#0e151b]">15%</p>
+              <p class="text-xs text-[#507695]">±5%</p>
+              <span class="badge badge-green mt-1">정상</span>
+            </div>
+          </a>
+          
+          <!-- 사용자 2 (링크로 변경) -->
+          <a href="guardian_detail.html?user=user2" class="flex justify-between items-center bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
+                <span class="text-yellow-500 text-sm">주의</span>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-[#0e151b]">박지민</p>
+                <p class="text-xs text-[#507695]">마지막 업데이트: 10분 전</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-[#0e151b]">45%</p>
+              <p class="text-xs text-[#507695]">±8%</p>
+              <span class="badge badge-yellow mt-1">주의</span>
+            </div>
+          </a>
+          
+          <!-- 사용자 3 (추가) -->
+          <a href="guardian_detail.html?user=user3" class="flex justify-between items-center bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                <span class="text-red-500 text-sm">위험</span>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-[#0e151b]">이서연</p>
+                <p class="text-xs text-[#507695]">마지막 업데이트: 3분 전</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-[#0e151b]">72%</p>
+              <p class="text-xs text-[#507695]">±5%</p>
+              <span class="badge badge-red mt-1">긴급</span>
+            </div>
+          </a>
+        </div>
+        
+        <button class="w-full mt-3 border border-[#2c90e2] text-[#2c90e2] py-2 rounded-xl font-medium text-sm">
+          대상자 추가
+        </button>
+      </div>
+      
+      <!-- 알림 설정 카드 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="text-base font-bold text-[#0e151b] mb-4">알림 설정</h2>
+        
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">응급 상황 알림</p>
+              <p class="text-xs text-[#507695]">위험도 70% 이상</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">경고 상황 알림</p>
+              <p class="text-xs text-[#507695]">위험도 50% 이상</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">일일 리포트</p>
+              <p class="text-xs text-[#507695]">24시간 요약 보고서</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+          
+          <!-- 추가된 알림 옵션 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">배터리 부족 알림</p>
+              <p class="text-xs text-[#507695]">20% 이하 시 알림</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">연결 해제 알림</p>
+              <p class="text-xs text-[#507695]">기기 연결 끊김 시</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 긴급 알림 카드 (추가) -->
+      <div class="card-with-shadow p-5 mb-4 bg-red-50 border border-red-200">
+        <div class="flex items-center mb-3">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-red-600">긴급 알림</h3>
+            <p class="text-xs text-red-500">이서연님의 심장 상태가 위험 수준입니다</p>
+          </div>
+        </div>
+        
+        <a href="guardian_detail.html?user=user3" class="block w-full bg-red-600 text-white py-2 rounded-xl text-center text-sm font-medium">
+          상세 정보 확인
+        </a>
+      </div>
+    </div>
+
+    <!-- 하단 내비게이션 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white shadow-md py-2 px-4">
+      <div class="max-w-lg mx-auto">
+        <div class="flex justify-between">
+          <a href="#" class="flex flex-col items-center text-[#2c90e2]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span class="text-xs mt-1">홈</span>
+          </a>
+          <a href="health_test.html" class="flex flex-col items-center text-[#507695]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span class="text-xs mt-1">자가 테스트</span>
+          </a>
+          <a href="multimodal_risk_calculator.html" class="flex flex-col items-center text-[#507695]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
+            <span class="text-xs mt-1">위험도 분석</span>
+          </a>
+          <a href="#" class="flex flex-col items-center text-[#507695]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span class="text-xs mt-1">설정</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 코드 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 사용자/보호자 모드 전환
+      const userModeInputs = document.querySelectorAll('input[name="user-mode"]');
+      const userContent = document.getElementById('user-content');
+      const guardianContent = document.getElementById('guardian-content');
+      
+      userModeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+          if (this.value === 'user') {
+            userContent.classList.remove('hidden');
+            guardianContent.classList.add('hidden');
+          } else {
+            userContent.classList.add('hidden');
+            guardianContent.classList.remove('hidden');
+          }
+        });
+      });
+      
+      // 위험도 게이지 업데이트 예시
+      function updateRiskGauge(percentage) {
+        const circle = document.querySelector('circle:last-of-type');
+        const percentageText = document.querySelector('.absolute span:first-child');
+        
+        const circumference = 2 * Math.PI * 54;
+        const dashOffset = circumference * (1 - percentage / 100);
+        
+        circle.style.strokeDasharray = circumference;
+        circle.style.strokeDashoffset = dashOffset;
+        percentageText.textContent = `${percentage}%`;
+        
+        // 위험도에 따른 색상 설정
+        if (percentage >= 70) {
+          circle.style.stroke = '#ef4444'; // 빨간색 (위험)
+          percentageText.style.color = '#ef4444';
+        } else if (percentage >= 50) {
+          circle.style.stroke = '#f59e0b'; // 노란색 (주의)
+          percentageText.style.color = '#f59e0b';
+        } else if (percentage >= 30) {
+          circle.style.stroke = '#ebb305'; // 연한 노란색 (경계)
+          percentageText.style.color = '#ebb305';
+        } else {
+          circle.style.stroke = '#10b981'; // 녹색 (안전)
+          percentageText.style.color = '#10b981';
+        }
+      }
+      
+      // 초기 위험도 설정
+      updateRiskGauge(20);
+      
+      // 멀티모달 데이터 프로세서가 있으면 연결
+      if (window.multimodalDataProcessor) {
+        window.multimodalDataProcessor.startDataCollection(['ecg', 'ppg', 'accel', 'temp']);
+      }
+      
+      // AI 상담 플로팅 버튼 이벤트
+      const floatingAiButton = document.getElementById('floating-ai-button');
+      const openAiChat = document.getElementById('open-ai-chat');
+      
+      function openAiConsultation() {
+        window.location.href = 'ai_consultation.html';
+      }
+      
+      if (floatingAiButton) {
+        floatingAiButton.addEventListener('click', openAiConsultation);
+      }
+      
+      if (openAiChat) {
+        openAiChat.addEventListener('click', openAiConsultation);
+      }
+    });
+  </script>
+  
+  <!-- 외부 JavaScript 파일 -->
+  <script src="js/multimodal_data_processor.js"></script>
+  <script src="js/health_risk_calculator.js"></script>
+  <script src="js/modern_app.js"></script>
+</body>
+</html> 

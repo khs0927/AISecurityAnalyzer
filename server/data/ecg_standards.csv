@@ -1,0 +1,14 @@
+condition,heart_rate_min,heart_rate_max,hrv_min,hrv_max,qt_interval_min,qt_interval_max,st_deviation_min,st_deviation_max,risk_score
+normal,60,100,45,65,350,440,0,0.5,10
+sinus_tachycardia,100,150,30,50,330,430,0,0.5,30
+sinus_bradycardia,40,60,40,70,360,450,0,0.5,25
+atrial_fibrillation,70,180,5,20,350,440,0,0.5,50
+atrial_flutter,100,150,10,20,340,430,0,0.5,45
+premature_ventricular_contraction,60,100,15,35,350,450,0,1.0,35
+ventricular_tachycardia,140,220,5,15,350,500,0,2.0,80
+st_elevation_mi,60,120,20,40,350,450,2.0,5.0,90
+non_st_elevation_mi,60,120,20,40,350,450,0.5,1.5,85
+long_qt_syndrome,60,100,30,50,460,600,0,0.5,60
+second_degree_av_block,40,60,20,40,350,440,0,0.5,55
+third_degree_av_block,20,50,10,30,350,440,0,0.5,70
+ventricular_fibrillation,300,600,1,5,200,300,0,3.0,95

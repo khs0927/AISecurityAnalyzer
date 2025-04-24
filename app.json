@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "HeartCare - 낫투데이",
+    "slug": "heart-care",
+    "description": "심장 건강 모니터링 및 응급 대응을 위한 스마트 케어 앱",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6D94"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.heartcare.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF6D94"
+      },
+      "package": "com.heartcare.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "heart-care-app"
+      }
+    }
+  }
+}

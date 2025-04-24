@@ -1,0 +1,59 @@
+name: 자동화 파이프라인 시작
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '서버 수정 브랜치 생성'
+        required: true
+        default: 'fix/server-typescript'
+        type: string
+      auto_merge:
+        description: '자동 머지 활성화'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  start-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Create server fix branch
+        run: |
+          git checkout -b ${{ github.event.inputs.branch }}
+          git push -u origin ${{ github.event.inputs.branch }}
+      
+      - name: Verify API keys
+        run: |
+          if [ -f ".env" ]; then
+            echo "환경 변수 파일이 이미 존재합니다."
+            cp .env.pipeline .env.verified
+          else
+            echo "환경 변수 파일을 복사합니다."
+            cp .env.pipeline .env
+          fi
+          
+          git add .env || echo "이미 추적 중이거나 .gitignore에 등록됨"
+          git commit -m "🔧 환경 변수 설정" || echo "커밋할 변경사항 없음"
+          git push origin ${{ github.event.inputs.branch }}
+      
+      - name: Trigger server fix pipeline
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: trigger-pipeline-server-fix
+          client-payload: '{"branch": "${{ github.event.inputs.branch }}", "auto_merge": ${{ github.event.inputs.auto_merge }}}'
+      
+      - name: Start pipeline notification
+        run: |
+          echo "🚀 파이프라인 시작되었습니다!"
+          echo "다음 단계가 자동으로 진행됩니다:"
+          echo "① 서버 타입스크립트 오류 수정"
+          echo "② 홈·그래프 실동작 구현"
+          echo "③ WebSocket 위험도 탭 구현"
+          echo "④ AI 위험도 API 구현"
+          echo "⑤ 지도·약학 API 구현"
+          echo "⑥ UX 폴리싱 & 최종 배포" 

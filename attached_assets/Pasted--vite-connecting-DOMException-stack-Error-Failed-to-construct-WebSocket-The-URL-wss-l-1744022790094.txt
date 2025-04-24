@@ -1,0 +1,47 @@
+[vite] connecting...
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=aSOvOSBMtb2l' is…"}
+
+WebSocket connection established
+Warning: React does not recognize the &#x60;indicatorClassName&#x60; prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase &#x60;indicatorclassname&#x60; instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+    at div
+    at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RLTE5R7I.js?v=fd15777a:41:13
+    at Provider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-progress.js?v=fd15777a:30:15)
+    at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-progress.js?v=fd15777a:90:7
+    at _c (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/ui/progress.tsx:21:11)
+    at div
+    at div
+    at _c (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at RiskAnalysis (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/pages/RiskAnalysis.tsx:34:45)
+    at Route (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=fd15777a:323:16)
+    at Switch (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=fd15777a:379:17)
+    at Router
+    at div
+    at div
+    at AppLayout (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/layout/AppLayout.tsx:24:22)
+    at AppProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/contexts/AppContext.tsx:31:31)
+    at QueryClientProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=fd15777a:2805:3)
+    at App
+at div
+at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RLTE5R7I.js?v=fd15777a:41:13
+at Provider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-progress.js?v=fd15777a:30:15)
+at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-progress.js?v=fd15777a:90:7
+at _c (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/ui/progress.tsx:21:11)
+at div
+at div
+at _c (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/ui/card.tsx:20:11)
+at div
+at RiskAnalysis (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/pages/RiskAnalysis.tsx:34:45)
+at Route (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=fd15777a:323:16)
+at Switch (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=fd15777a:379:17)
+at Router
+at div
+at div
+at AppLayout (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/components/layout/AppLayout.tsx:24:22)
+at AppProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/src/contexts/AppContext.tsx:31:31)
+at QueryClientProvider (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=fd15777a:2805:3)
+at App
+at t.value (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

@@ -1,0 +1,249 @@
+아래처럼 OpenAI 관련 코드를 모두 제거하고, 오직 Hugging Face API 호출만 남기는 식으로 server/ai.ts를 정리하시면 됩니다.
+
+⸻
+
+1. server/ai.ts (Hugging Face 전용)
+
+import { Request, Response, Router } from "express";
+// import fetch from "node-fetch";  // Node 18 미만 환경에서만 주석 해제
+
+const router = Router();
+
+// ──────────────────────────────────────────────────────────────
+// 환경 변수 로드
+// ──────────────────────────────────────────────────────────────
+const PUBMED_API_KEY = process.env.PUBMED_API_KEY || "";
+const HUGGINGFACE_TOKEN = process.env.HUGGINGFACE_TOKEN || process.env.HUGGINGFACE_API_KEY || "";
+
+if (!PUBMED_API_KEY) {
+  console.error("⚠️ PUBMED_API_KEY가 없습니다. PubMed 검색이 제한됩니다.");
+}
+if (!HUGGINGFACE_TOKEN) {
+  console.error("⚠️ HUGGINGFACE_TOKEN이 없습니다. AI 기능이 제한됩니다.");
+}
+
+// ──────────────────────────────────────────────────────────────
+// 시스템(의료) 프롬프트
+// ──────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `
+당신은 심장 질환 전문 AI 의사 'HAIM-MIMIC-MM' 입니다.
+... (기존 SYSTEM_PROMPT 내용 그대로) ...
+`;
+
+// ──────────────────────────────────────────────────────────────
+// PubMed 검색 함수 (E-utilities)
+// ──────────────────────────────────────────────────────────────
+async function searchPubMed(query: string, maxResults = 3): Promise<any[]> {
+  try {
+    const q = encodeURIComponent(query);
+    const url1 = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${q}&retmode=json&retmax=${maxResults}&api_key=${PUBMED_API_KEY}`;
+    const r1 = await fetch(url1);
+    const d1: any = await r1.json();
+    const ids: string[] = d1.esearchresult.idlist || [];
+    if (!ids.length) return [];
+
+    const url2 = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(",")}&retmode=json&api_key=${PUBMED_API_KEY}`;
+    const r2 = await fetch(url2);
+    const d2: any = await r2.json();
+    const res: any = d2.result || {};
+
+    return ids.map(id => {
+      const art = res[id] || {};
+      return {
+        id,
+        title: art.title,
+        authors: (art.authors||[]).map((a:any)=>a.name).join(", "),
+        journal: art.fulljournalname || art.source,
+        pubDate: art.pubdate,
+        url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+      };
+    });
+  } catch (e) {
+    console.error("PubMed 검색 오류:", e);
+    return [];
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// HF 호출 공통 함수
+// ──────────────────────────────────────────────────────────────
+async function invokeHF(modelId: string, inputs: string, params = {}): Promise<any> {
+  const res = await fetch(`https://api-inference.huggingface.co/models/${modelId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${HUGGINGFACE_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ inputs, parameters: params }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`HuggingFace API 오류 ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
+
+// ──────────────────────────────────────────────────────────────
+// 1) 일반 대화용 엔드포인트 (/api/ai/chat)
+// ──────────────────────────────────────────────────────────────
+router.post("/chat", async (req: Request, res: Response) => {
+  try {
+    const { userId, message, context = "[]", healthData } = req.body;
+    if (!userId || !message) return res.status(400).json({ error: "userId, message 필요" });
+
+    const ctx = JSON.parse(context) || [];
+    const pubmed = await searchPubMed(`${message} heart cardiac`);
+
+    // 프롬프트 조립
+    let prompt = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...ctx.map((d: any) => ({
+        role: d.sender === "user" ? "user" : "assistant",
+        content: d.content,
+      })),
+      {
+        role: "user",
+        content: [
+          message,
+          healthData
+            ? `\n\n건강 데이터:\n- 심박수: ${healthData.heartRate||"N/A"}\n- 산소포화도: ${healthData.oxygenLevel||"N/A"}`
+            : "",
+          pubmed.length
+            ? "\n\n논문:\n" +
+              pubmed.map((p,i) => `${i+1}. ${p.title} (${p.url})`).join("\n")
+            : "",
+        ].join("")
+      }
+    ]
+      .map(m => `${m.role === "user" ? "사용자" : "AI"}: ${m.content}`)
+      .join("\n\n");
+
+    // HF 호출 (QWEN2.5-Omni-7B)
+    const hfOut: any = await invokeHF("Qwen/Qwen2.5-Omni-7B", prompt, {
+      max_new_tokens: 512,
+      temperature: 0.4,
+    });
+    const aiText = Array.isArray(hfOut)
+      ? hfOut[0].generated_text
+      : hfOut.generated_text || "응답 생성 실패";
+
+    return res.json({ aiResponse: aiText.trim(), pubmedReferences: pubmed });
+  } catch (e: any) {
+    console.error("/chat 오류:", e);
+    return res.status(500).json({ error: e.message || "알 수 없는 오류" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// 2) JSON 진단 엔드포인트 (/api/ai/v1/analyze)
+// ──────────────────────────────────────────────────────────────
+router.post("/v1/analyze", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "text 필요" });
+
+    const pubmed = await searchPubMed(text);
+    const analPrompt = `
+질문: "${text}"
+아래 JSON 형식으로 답해주세요:
+{
+  "diagnosis": "...",
+  "risk": { "score": 0-100, "level": "낮음/중간/높음", "confidence": 0.0-1.0 },
+  "recommendations": ["...", "..."]
+}
+`;
+    const full = SYSTEM_PROMPT + "\n\n" + analPrompt;
+    const hfOut: any = await invokeHF("Qwen/Qwen2.5-Omni-7B", full, {
+      max_new_tokens: 512,
+      temperature: 0.3,
+    });
+    const gen = Array.isArray(hfOut) ? hfOut[0].generated_text : hfOut.generated_text;
+    let payload;
+    try {
+      const m = gen.match(/\{[\s\S]*\}/);
+      payload = m ? JSON.parse(m[0]) : { raw: gen };
+    } catch {
+      payload = { raw: gen };
+    }
+
+    return res.json({ ...payload, pubmedReferences: pubmed });
+  } catch (e: any) {
+    console.error("/v1/analyze 오류:", e);
+    return res.status(500).json({ error: e.message || "오류 발생" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// 3) 실시간 위험도 (/api/ai/v1/realtime-risk)
+// ──────────────────────────────────────────────────────────────
+router.post("/v1/realtime-risk", (req, res) => {
+  const { heartRate, oxygenLevel } = req.body;
+  let score = 0;
+  const reasons: string[] = [];
+  if (heartRate !== undefined) {
+    if (heartRate < 60) { score += 20; reasons.push("서맥"); }
+    else if (heartRate > 100) { score += 20; reasons.push("빈맥"); }
+  }
+  if (oxygenLevel !== undefined) {
+    if (oxygenLevel < 90) { score += 30; reasons.push("심각 저산소증"); }
+    else if (oxygenLevel < 95) { score += 15; reasons.push("경미 저산소증"); }
+  }
+  const level = score >= 50 ? "높음" : score >= 20 ? "중간" : "낮음";
+  const recs = ["정기 검진"];
+  if (score >= 50) recs.push("응급 지원 요청");
+  return res.json({ riskScore: score, riskLevel: level, reasons, recommendations: recs, timestamp: new Date().toISOString() });
+});
+
+// ──────────────────────────────────────────────────────────────
+// 4) 상담 엔드포인트 (/api/ai/v1/consult)
+// ──────────────────────────────────────────────────────────────
+router.post("/v1/consult", async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "message 필요" });
+
+    const pubmed = await searchPubMed(message + " heart");
+    const full = SYSTEM_PROMPT + "\n\n" + message;
+    const hfOut: any = await invokeHF("Henrychur/MMed-Llama-3-8B-EnIns", full, {
+      max_new_tokens: 512,
+      temperature: 0.4,
+    });
+    const reply = Array.isArray(hfOut) ? hfOut[0].generated_text : hfOut.generated_text;
+
+    return res.json({ response: reply.trim(), pubmedReferences: pubmed, timestamp: new Date().toISOString() });
+  } catch (e: any) {
+    console.error("/v1/consult 오류:", e);
+    return res.status(500).json({ error: e.message || "오류" });
+  }
+});
+
+export default router;
+
+2. .env 에는 두 개만 있으면 됩니다
+
+HUGGINGFACE_TOKEN=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
+PUBMED_API_KEY=4b2e41e756fdc8f0f3f5ebb7bf41a3a11509
+
+(OpenAI_API_KEY 관련 설정은 모두 제거)
+
+⸻
+
+3. 혹시 추가로 필요할 수 있는 파일
+	1.	Express 서버 엔트리 (app.ts / index.ts)
+
+import express from "express";
+import aiRouter from "./server/ai";
+
+const app = express();
+app.use(express.json());
+app.use("/api/ai", aiRouter);
+
+app.listen(8000, () => console.log("Server on :8000"));
+
+
+	2.	Next.js → Express 호출 경로
+	•	next.config.js 로 /api/ai/:path* → http://localhost:8000/api/ai/:path* 리라이트 설정
+	•	또는 프론트 fetch URL을 process.env.NEXT_PUBLIC_API_URL + "/ai/[엔드포인트]" 형태로 맞춰주세요.
+
+위 두 파일 중 아직 공유 안 해주셨다면, 경로 및 마운트 설정이 올바른지 확인해 볼 필요가 있습니다.
+필요하시면 해당 파일들도 보여주세요!

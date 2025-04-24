@@ -1,0 +1,478 @@
+# React Native 지도 로딩 문제 및 병원 검색 오류 해결 방법
+
+현재 앱에서 "지도를 불러오는 중..." 메시지에서 진행이 되지 않고, 병원 검색이 작동하지 않는 문제가 발생하고 있습니다. 이 문제는 주로 지도 초기화, 위치 정보 접근, 그리고 API 연결과 관련된 여러 요인에 의해 발생할 수 있습니다. 제공된 코드와 문제 상황을 분석하여 해결책을 제시해 드리겠습니다.
+
+## 주요 문제점 분석
+
+### 1. 지도 렌더링 문제
+
+지도가 "불러오는 중..." 상태에서 멈추는 현상은 다음과 같은 원인이 있을 수 있습니다:
+
+- **지도 컨테이너 크기 계산 오류**: 탭 기반 레이아웃에서 흔히 발생하는 문제[4][9]
+- **Leaflet 초기화 시점 문제**: 컴포넌트가 완전히 마운트되기 전에 지도 초기화가 일어남[1]
+- **CSS 및 스타일 문제**: Leaflet CSS가 제대로 로드되지 않거나 지도 컨테이너 스타일 문제[9]
+
+### 2. 위치 정보 접근 문제
+
+위치 정보가 제대로 접근되지 않으면 주변 병원 검색이 작동하지 않을 수 있습니다:
+
+- **위치 권한 거부**: 사용자가 위치 권한을 거부했거나 설정에서 비활성화됨[5]
+- **HTTPS 요구사항**: 위치 정보 접근은 보안 컨텍스트(HTTPS)에서만 작동할 수 있음[5]
+- **React Native 위치 접근 문제**: navigator.geolocation API 대신 Expo Location 사용 필요[10]
+
+### 3. API 연결 문제
+
+병원 검색 API 연결에 문제가 있을 수 있습니다:
+
+- **API 키 문제**: 올바른 API 키가 제공되지 않았거나 권한이 부족함[6]
+- **네트워크 연결 문제**: 네트워크 요청이 차단되거나 타임아웃 발생[11]
+- **CORS 정책**: API 요청이 CORS 정책에 의해 차단됨[11]
+
+## 해결 방법
+
+### 1. 지도 렌더링 문제 해결
+
+```javascript
+// OpenStreetMap.tsx 또는 MapComponent.tsx 파일 수정
+useEffect(() => {
+  if (!map || !userLocation) return;
+  
+  // 지도가 준비되면 크기 재계산 실행
+  map.whenReady(() => {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 1000);
+  });
+  
+  // 사용자 위치로 이동 및 마커 설정
+  map.setView(userLocation, map.getZoom());
+  if (userMarker) {
+    userMarker.setLatLng(userLocation);
+  }
+}, [map, userMarker, userLocation]);
+
+// 탭 전환 시 지도 크기 재계산
+useEffect(() => {
+  if (map && activeTab === 'hospitals') {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 300);
+  }
+}, [activeTab, map]);
+```
+
+### 2. 위치 정보 접근 개선
+
+```javascript
+// 위치 정보 접근 코드 수정 (React Native)
+import * as Location from 'expo-location';
+
+// navigator.geolocation 대신 expo-location 사용
+const startLocationTracking = async () => {
+  try {
+    // 위치 권한 요청
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setError('위치 접근 권한이 거부되었습니다.');
+      // 기본 위치로 대체 (서울 시청)
+      setUserLocation([37.5666, 126.9779]);
+      return;
+    }
+
+    // 현재 위치 가져오기
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced
+    });
+    
+    const { latitude, longitude } = location.coords;
+    setUserLocation([latitude, longitude]);
+    
+    // 실시간 위치 추적
+    const watchId = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.Balanced, timeInterval: 5000 },
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation([latitude, longitude]);
+      }
+    );
+    
+    return () => {
+      watchId.remove();
+    };
+  } catch (err) {
+    console.error('위치 정보 접근 오류:', err);
+    setError('위치 정보를 가져올 수 없습니다.');
+    // 기본 위치로 대체
+    setUserLocation([37.5666, 126.9779]);
+  }
+};
+```
+
+### 3. API 연결 문제 해결
+
+```javascript
+// API 서비스 모듈 수정
+import axios from 'axios';
+
+// API 요청 타임아웃 및 재시도 설정
+const hospitalApiClient = axios.create({
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// 요청 실패 시 재시도 로직
+hospitalApiClient.interceptors.response.use(
+  response => response,
+  async error => {
+    const { config } = error;
+    
+    // 이미 재시도한 요청인지 확인
+    if (config._retry) {
+      return Promise.reject(error);
+    }
+    
+    // 요청 실패 시 한 번 더 시도
+    config._retry = true;
+    try {
+      return await hospitalApiClient(config);
+    } catch (retryError) {
+      return Promise.reject(retryError);
+    }
+  }
+);
+
+// 병원 검색 함수
+export const searchNearbyHospitals = async (latitude, longitude, radius = 2000) => {
+  try {
+    // API 키가 올바르게 설정되었는지 확인
+    if (!API_KEY) {
+      console.error('API 키가 설정되지 않았습니다.');
+      return [];
+    }
+    
+    const response = await hospitalApiClient.get(
+      `https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlMdcncListInfoInqire`,
+      {
+        params: {
+          serviceKey: API_KEY,
+          WGS84_LON: longitude,
+          WGS84_LAT: latitude,
+          radius: radius,
+          numOfRows: 30,
+          pageNo: 1
+        }
+      }
+    );
+    
+    // 응답 데이터 확인 및 처리
+    console.log('API 응답:', response.data);
+    
+    // 응답 데이터 파싱 및 반환
+    // ... 데이터 파싱 로직
+    
+    return []; // 실제 데이터로 대체
+  } catch (error) {
+    console.error('병원 검색 API 오류:', error);
+    
+    // 오류 상세 정보 확인
+    if (error.response) {
+      console.error('응답 상태 코드:', error.response.status);
+      console.error('응답 데이터:', error.response.data);
+    } else if (error.request) {
+      console.error('요청은 전송되었으나 응답이 없음:', error.request);
+    } else {
+      console.error('오류 메시지:', error.message);
+    }
+    
+    throw error;
+  }
+};
+```
+
+## 디버깅 및 문제 해결 절차
+
+### 1. 지도 초기화 확인
+
+1. **지도 컨테이너 확인**: 
+   ```jsx
+   
+   ```
+
+2. **지도 로드 상태 로깅**:
+   ```javascript
+   console.log('지도 초기화 시작...');
+   map.on('load', () => console.log('지도 로드 완료!'));
+   ```
+
+### 2. 위치 정보 디버깅
+
+```javascript
+// 위치 정보 요청 디버깅
+console.log('위치 정보 권한 상태 확인 중...');
+Location.getForegroundPermissionsAsync().then(
+  ({ status }) => console.log('위치 권한 상태:', status)
+);
+
+// 위치 정보 접근 시도 로깅
+console.log('위치 정보 요청 시도...');
+Location.getCurrentPositionAsync({
+  accuracy: Location.Accuracy.Balanced
+}).then(
+  location => console.log('위치 정보 받음:', location.coords),
+  error => console.error('위치 정보 오류:', error)
+);
+```
+
+### 3. API 요청 디버깅
+
+```javascript
+// API 요청 디버깅
+const debugApiRequest = async () => {
+  try {
+    console.log('API 요청 시작...');
+    // 서비스 키가 URL 인코딩 되었는지 확인
+    const encodedKey = encodeURIComponent(API_KEY);
+    console.log('인코딩된 API 키:', encodedKey.substring(0, 10) + '...');
+    
+    // 테스트 요청
+    const testUrl = `https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlMdcncListInfoInqire?serviceKey=${encodedKey}&WGS84_LON=126.9779&WGS84_LAT=37.5666&radius=2000&numOfRows=1&pageNo=1`;
+    console.log('테스트 URL:', testUrl);
+    
+    const response = await fetch(testUrl);
+    const text = await response.text();
+    console.log('API 응답 텍스트:', text.substring(0, 300) + '...');
+  } catch (error) {
+    console.error('API 테스트 오류:', error);
+  }
+};
+
+// 디버깅 함수 실행
+debugApiRequest();
+```
+
+## 앱 수정 예제
+
+아래는 위의 해결책을 적용한 최종 코드 예시입니다:
+
+```jsx
+// App.tsx
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
+import * as Location from 'expo-location';
+import MapComponent from './components/MapComponent';
+import OpenStreetMap from './components/OpenStreetMap';
+import { searchNearbyHospitals } from './api/hospitalService';
+
+const App = () => {
+  const [selectedMap, setSelectedMap] = useState('google');
+  const [activeTab, setActiveTab] = useState('hospitals');
+  const [hospitals, setHospitals] = useState([]);
+  const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // 위치 정보 및 병원 데이터 로드
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        
+        // 위치 권한 요청
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setError('위치 접근 권한이 필요합니다. 설정에서 권한을 활성화해주세요.');
+          setLoading(false);
+          return;
+        }
+
+        // 현재 위치 가져오기
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced
+        });
+        setLocation(location.coords);
+        
+        // 주변 병원 검색
+        const { latitude, longitude } = location.coords;
+        const nearbyHospitals = await searchNearbyHospitals(latitude, longitude);
+        
+        console.log(`${nearbyHospitals.length}개 병원 찾음`);
+        setHospitals(nearbyHospitals);
+      } catch (err) {
+        console.error('초기화 오류:', err);
+        setError('위치 정보를 가져오거나 병원을 검색하는 중 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (error) {
+    return (
+      
+        
+          오류 발생
+          {error}
+           window.location.reload()}
+          >
+            다시 시도
+          
+        
+      
+    );
+  }
+
+  return (
+    
+      
+         setActiveTab('guardians')}
+        >
+          보호자
+        
+         setActiveTab('hospitals')}
+        >
+          주변 병원
+        
+      
+      
+      {activeTab === 'hospitals' && (
+        
+          {selectedMap === 'google' ? (
+            
+          ) : (
+            
+          )}
+          
+           setSelectedMap(selectedMap === 'google' ? 'osm' : 'google')}
+          >
+            
+              {selectedMap === 'google' ? 'OpenStreetMap으로 보기' : 'Google Maps로 보기'}
+            
+          
+        
+      )}
+      
+      {/* 나머지 UI 컴포넌트들 */}
+    
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#FF6D94',
+  },
+  tabText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  mapContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  mapToggle: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'white',
+    padding: 8,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  mapToggleText: {
+    fontSize: 12,
+    color: '#FF6D94',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#F44336',
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    color: '#666',
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FF6D94',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+});
+
+export default App;
+```
+
+## 결론
+
+지도 로딩 문제와 병원 검색 오류는 여러 요인들이 복합적으로 작용하여 발생할 수 있습니다. 이 문제를 해결하기 위한 핵심 포인트는 다음과 같습니다:
+
+1. **지도 초기화 시점 조정**: 컴포넌트가 완전히 마운트된 후 지도를 초기화하고, `invalidateSize()` 메서드를 사용하여 지도 크기를 재계산합니다[4][9].
+
+2. **위치 정보 접근 방식 개선**: React Native에서는 `navigator.geolocation` 대신 `expo-location`을 사용하여 위치 정보에 접근합니다[10].
+
+3. **API 요청 오류 처리 강화**: 병원 검색 API 요청 시 오류 처리를 철저히 하고, 요청 실패 시 재시도 로직을 구현합니다[6][11].
+
+4. **디버깅 정보 추가**: 코드 곳곳에 콘솔 로그를 추가하여 문제 지점을 쉽게 파악할 수 있도록 합니다.
+
+위 해결책을 적용하면 지도가 제대로 로드되고 병원 검색 기능이 정상적으로 작동할 것입니다. 문제가 지속된다면 더 구체적인 오류 메시지를 확인하여 추가적인 디버깅이 필요할 수 있습니다.
+
+Citations:
+[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/53686762/65ccc1dc-c49c-44ed-9ea1-5c71f210bec1/paste.txt
+[2] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/53686762/0e33f8a5-b75f-42a5-abc4-e41d2b6192d1/paste-2.txt
+[3] https://pplx-res.cloudinary.com/image/upload/v1744396018/user_uploads/sBleSztGUNKbpfr/image.jpg
+[4] https://gis.stackexchange.com/questions/224932/problem-with-map-tiles-loading-with-leaflet-and-bootstrap
+[5] https://stackoverflow.com/questions/78857478/geolocation-not-working-when-accessing-localhost-using-mobile-browser
+[6] https://help.3commas.io/en/articles/5668028-troubleshoot-api-connection-issues
+[7] https://docs.1up.health/help-center/Content/en-US/connect-patient/system-search-api.html
+[8] https://github.com/fullstackreact/google-maps-react/issues/288
+[9] https://forum.ionicframework.com/t/leaflet-map-not-showed-properly/204854
+[10] https://stackoverflow.com/questions/68176829/why-navigator-geolocation-getcurrentposition-is-not-available-with-react-native/68193580
+[11] https://www.serviceobjects.com/blog/troubleshooting-api-connection-issues/
+[12] https://developer.api.nhs.uk/nhs-api/documentation/service-search-organisations
+[13] https://stackoverflow.com/questions/75235815/react-google-maps-stuck-on-loading-when-putting-the-standalonesearchbox-in-the
+[14] https://stackoverflow.com/questions/42115723/leaflet-map-not-loading
+[15] https://glebbahmutov.com/blog/cypress-geolocation/
+[16] https://www.digitalsamba.com/blog/troubleshooting-common-rest-api-errors
+[17] https://stackoverflow.com/questions/49129565/google-places-api-for-hospitals
+[18] https://github.com/react-native-maps/react-native-maps/issues/3929
+[19] https://groups.google.com/g/leaflet-js/c/YibMuofB09I
+[20] https://www.telerik.com/forums/navigator-geolocation-getcurrentposition-doesn't-work-on-nexus-s
+[21] https://www.ibm.com/docs/en/api-connect/10.0.x?topic=information-troubleshooting-api-connect
+[22] https://www.api.gov.uk/nd/directory-of-healthcare-services-service-search-api/
+[23] https://stackoverflow.com/questions/41435163
+
+---
+Perplexity로부터의 답변: pplx.ai/share

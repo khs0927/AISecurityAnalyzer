@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare 모바일 앱 연결</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        h1 { 
+            color: #FF6D94; 
+            margin-bottom: 25px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 15px 0;
+            margin: 15px 0;
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color: #ff5c88;
+        }
+        .qr {
+            margin: 20px auto;
+            width: 200px;
+            height: 200px;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            border-radius: 8px;
+        }
+        .note {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            text-align: left;
+        }
+        .url {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>낫투데이(HeartCare)</h1>
+    
+    <div class="card">
+        <h2>Expo Go 앱과 연결하기</h2>
+        <p>아래 QR 코드를 스캔하거나 URL을 복사하여 Expo Go 앱에서 열어주세요.</p>
+        
+        <svg class="qr" id="qr-code" width="200" height="200" viewBox="0 0 25 25" shape-rendering="crispEdges">
+            <!-- SVG QR 코드 생성 -->
+        </svg>
+        
+        <div class="url" id="expo-url">exp://exp.host/@hsml/heart-care-expo</div>
+        
+        <button class="button" onclick="copyUrl()">URL 복사하기</button>
+        
+        <div class="note">
+            <p><strong>연결 방법:</strong></p>
+            <ol>
+                <li>App Store 또는 Google Play에서 <strong>Expo Go</strong> 앱을 설치하세요.</li>
+                <li>Expo Go 앱을 열고 '프로필' 탭을 선택하세요.</li>
+                <li>'URL 입력' 옵션을 선택하여 위 URL을 붙여넣으세요.</li>
+                <li>또는 앱 내 QR 스캐너로 위 QR 코드를 스캔하세요.</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>직접 연결</h2>
+        <p>아래 버튼을 클릭하여 Expo Go 앱을 바로 실행할 수 있습니다. (모바일에서만 작동)</p>
+        
+        <a href="exp://exp.host/@hsml/heart-care-expo" class="button">Expo Go로 열기</a>
+        <a href="exps://exp.host/@hsml/heart-care-expo" class="button" style="background-color: #4630EB;">iOS에서 열기 (보안 연결)</a>
+    </div>
+    
+    <div class="card">
+        <h2>문제가 있으신가요?</h2>
+        <p>앱 연결에 문제가 있다면 아래 링크를 참고하세요:</p>
+        
+        <a href="/static/heart-care-debug.html" class="button" style="background-color: #607d8b;">연결 디버깅</a>
+        <a href="/static/heart-care-connection.html" class="button" style="background-color: #607d8b;">상세 연결 옵션</a>
+    </div>
+
+    <script>
+        function copyUrl() {
+            const url = document.getElementById('expo-url').innerText;
+            navigator.clipboard.writeText(url)
+                .then(() => alert('URL이 복사되었습니다!'))
+                .catch(err => alert('URL 복사 실패: ' + err));
+        }
+        
+        // SVG QR 코드 생성 (단순화된 버전)
+        function generateQR() {
+            const svg = document.getElementById('qr-code');
+            
+            // 배경
+            const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            bg.setAttribute("width", "25");
+            bg.setAttribute("height", "25");
+            bg.setAttribute("fill", "#ffffff");
+            svg.appendChild(bg);
+            
+            // QR 코드 모듈 (간소화된 HeartCare 앱 URL QR 코드)
+            const modules = [
+                "111111101101111",
+                "100001101001001",
+                "101101101001001",
+                "101101101001001",
+                "101101101001001",
+                "100001101001001",
+                "111111101010101",
+                "000000101111001",
+                "111111101001011",
+                "101110101101001",
+                "101001101000001",
+                "110111101010001",
+                "100000101010101",
+                "111100101101001",
+                "011100101111111"
+            ];
+            
+            for (let y = 0; y < modules.length; y++) {
+                for (let x = 0; x < modules[y].length; x++) {
+                    if (modules[y][x] === '1') {
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        rect.setAttribute("x", x.toString());
+                        rect.setAttribute("y", y.toString());
+                        rect.setAttribute("width", "1");
+                        rect.setAttribute("height", "1");
+                        rect.setAttribute("fill", "#000000");
+                        svg.appendChild(rect);
+                    }
+                }
+            }
+        }
+        
+        // 페이지 로드 시 QR 코드 생성
+        window.onload = generateQR;
+    </script>
+</body>
+</html>

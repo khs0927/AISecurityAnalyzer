@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "낫투데이(ONE MORE LIFE)",
+    "slug": "not-today-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "../assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "../assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF0000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nottoday.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "../assets/adaptive-icon.png",
+        "backgroundColor": "#FF0000"
+      },
+      "package": "com.nottoday.app",
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "web": {
+      "favicon": "../assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "not-today-app-project"
+      }
+    },
+    "sdkVersion": "50.0.0",
+    "plugins": [
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT"
+        }
+      ]
+    ]
+  }
+}

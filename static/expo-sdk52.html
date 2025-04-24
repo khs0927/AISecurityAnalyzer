@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare Expo SDK 52 링크</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        h1 { 
+            color: #FF6D94; 
+            margin-bottom: 25px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .link {
+            display: block;
+            width: 100%;
+            padding: 15px 0;
+            margin: 15px 0;
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .link:hover {
+            background-color: #ff5c88;
+        }
+        .link.alt {
+            background-color: #4630EB;
+        }
+        .note {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            text-align: left;
+        }
+        .code {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            word-break: break-all;
+            text-align: left;
+            margin: 15px 0;
+        }
+        .error {
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            text-align: left;
+            border-left: 4px solid #f44336;
+        }
+        .success {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            text-align: left;
+            border-left: 4px solid #4caf50;
+        }
+        #countdown {
+            font-weight: bold;
+            color: #FF6D94;
+        }
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>HeartCare Expo SDK 52 링크</h1>
+    
+    <div class="card">
+        <h2>SDK 52 버전 링크</h2>
+        <p>에러 메시지에 나온 대로 SDK 52 버전을 사용하는 링크입니다:</p>
+        
+        <div class="button-group">
+            <a href="exp://exp.host/@hsml/heart-care-expo" class="link">
+                SDK 52로 Expo 열기 (exp://)
+            </a>
+            
+            <a href="exps://exp.host/@hsml/heart-care-expo" class="link alt">
+                iOS용 SDK 52 링크 (exps://)
+            </a>
+            
+            <a href="expo://exp.host/@hsml/heart-care-expo" class="link" style="background-color: #009688;">
+                대체 스킴으로 시도 (expo://)
+            </a>
+        </div>
+        
+        <div class="code">
+            exp://exp.host/@hsml/heart-care-expo
+        </div>
+        
+        <button onclick="copyToClipboard()" class="link" style="background-color: #607d8b;">URL 복사하기</button>
+    </div>
+
+    <div class="card">
+        <h2>EAS 개발 빌드</h2>
+        <p>Expo 개발 빌드를 위한 링크입니다:</p>
+        
+        <div class="button-group">
+            <a href="exp://u.expo.dev/update/heart-care-expo" class="link">
+                개발 빌드 열기
+            </a>
+            
+            <a href="exps://u.expo.dev/update/heart-care-expo" class="link alt">
+                iOS 개발 빌드 (exps://)
+            </a>
+        </div>
+        
+        <div class="code">
+            exp://u.expo.dev/update/heart-care-expo
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>Android 전용 링크</h2>
+        
+        <a href="intent://exp.host/@hsml/heart-care-expo#Intent;scheme=exp;package=host.exp.exponent;end" class="link">
+            Android 인텐트로 열기
+        </a>
+        
+        <div class="note">
+            <p><strong>참고:</strong> 안드로이드 인텐트는 Chrome 브라우저에서 가장 잘 작동합니다.</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>iOS 전용 링크</h2>
+        
+        <a href="https://exp.host/--/to-exp/exp%3A%2F%2Fexp.host%2F%40hsml%2Fheart-care-expo" class="link">
+            iOS 유니버설 링크로 열기
+        </a>
+        
+        <div class="note">
+            <p><strong>참고:</strong> iOS에서는 Safari 브라우저를 사용하세요.</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>에러 메시지 설명</h2>
+        <div class="error">
+            <p>이전 오류: "VALIDATION_ERROR" - SDK 버전 불일치</p>
+            <p>서버에서 요구하는 SDK 버전과 요청한 버전이 일치하지 않았습니다.</p>
+            <p>문제를 해결하기 위해 app.json과 app.config.js에서 SDK 버전을 52.0.0으로 업데이트했습니다.</p>
+        </div>
+        
+        <div class="success">
+            <p><strong>수정된 내용:</strong></p>
+            <ol>
+                <li>heart-care-expo/app.json의 SDK 버전을 52.0.0으로 변경</li>
+                <li>runtimeVersion policy를 "sdkVersion"으로 설정</li>
+                <li>app.config.js 파일 추가하여 구성 일관성 유지</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>연결이 안되는 경우</h2>
+        <p>여전히 연결 문제가 있다면:</p>
+        <ol>
+            <li>Expo Go 앱이 최신 버전인지 확인하세요</li>
+            <li>URL을 직접 복사하여 Expo Go 앱에서 붙여넣기하세요</li>
+            <li>다른 네트워크 연결(Wi-Fi, 셀룰러)을 시도해보세요</li>
+            <li>기기를 재시작해보세요</li>
+        </ol>
+        
+        <a href="/mobile-guide.html" class="link" style="background-color: #607d8b;">
+            연결 가이드로 이동
+        </a>
+    </div>
+
+    <script>
+        // URL 복사 기능
+        function copyToClipboard() {
+            const url = "exp://exp.host/@hsml/heart-care-expo";
+            
+            navigator.clipboard.writeText(url).then(function() {
+                alert('URL이 클립보드에 복사되었습니다!');
+            }, function(err) {
+                alert('클립보드 복사 중 오류가 발생했습니다: ' + err);
+            });
+        }
+        
+        // 페이지 로드 시 실행
+        window.onload = function() {
+            // OS 감지
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isAndroid = /Android/.test(navigator.userAgent);
+            
+            // 자동 연결 시도
+            setTimeout(function() {
+                // OS에 따라 적절한 링크 자동 열기
+                if (isIOS) {
+                    window.location.href = "exps://exp.host/@hsml/heart-care-expo";
+                } else if (isAndroid) {
+                    window.location.href = "exp://exp.host/@hsml/heart-care-expo";
+                }
+                // 모바일 기기가 아닌 경우에는 자동 열기 시도하지 않음
+            }, 2000);
+        };
+    </script>
+</body>
+</html>

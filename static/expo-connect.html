@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare Expo 연결</title>
+    <style>
+        body {
+            font-family: 'Apple SD Gothic Neo', 'Nanum Gothic', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #FF6D94;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        h2 {
+            font-size: 22px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #FF6D94;
+            padding-bottom: 10px;
+        }
+        h3 {
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        p {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .link-box {
+            background-color: #f1f1f1;
+            border-left: 4px solid #FF6D94;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .copy-btn {
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .copy-btn:hover {
+            background-color: #ff5a87;
+        }
+        .method {
+            background-color: #fff9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ffd8e1;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        ol, ul {
+            margin-bottom: 20px;
+            padding-left: 25px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .note {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .expo-btn {
+            display: inline-block;
+            background-color: #1B1F23;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .video-container {
+            margin: 20px 0;
+        }
+        .video-container iframe {
+            width: 100%;
+            height: 315px;
+            border-radius: 10px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💗 HeartCare 앱 접속 가이드</h1>
+        
+        <div class="method" style="border: 2px solid #FF6D94; background-color: #fff4f7;">
+            <h2>가장 쉬운 방법: Expo Go에 직접 URL 입력</h2>
+            <p>기존에 사용하던 <strong>Heart2</strong>나 기타 프로젝트가 작동한다면 계속 사용하세요. 작동하지 않는 경우 아래 방법을 시도해보세요:</p>
+            
+            <ol>
+                <li>Safari에서 아래 링크 중 하나를 탭하세요. Expo Go 앱이 자동으로 열립니다.</li>
+                <li>앱이 열리면 로그인 화면이 나타날 수 있습니다. 기존 계정으로 로그인하세요.</li>
+                <li>로그인 후 프로젝트가 자동으로 열릴 것입니다.</li>
+            </ol>
+            
+            <div class="link-box" id="mainExpoLink" style="background-color: #ffe8ee; border-left: 4px solid #ff3377; font-weight: bold;">
+                exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('mainExpoLink')" style="background-color: #ff3377;">이 링크 복사하기 (추천)</button>
+        </div>
+        
+        <div class="video-container">
+            <h2>Expo 연결 가이드 영상</h2>
+            <p>아래 영상을 참고하여 Expo Go 앱에 연결하는 방법을 확인하세요:</p>
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/jtRgzNJKLbg" title="Expo Go 연결 가이드" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+        
+        <div class="method">
+            <h2>방법 2: Safari에서 열기</h2>
+            <p>다음 링크들을 Safari에서 열면 Expo Go 앱으로 바로 연결됩니다:</p>
+            
+            <h3>Heart-Care-Expo 프로젝트 (추천)</h3>
+            <div class="link-box" id="heartCareLink">
+                <a href="exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0">exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0</a>
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('heartCareLink')">링크 복사하기</button>
+            
+            <h3>Heart2 프로젝트</h3>
+            <div class="link-box" id="heart2Link">
+                <a href="exp://exp.host/@hsml/heart2">exp://exp.host/@hsml/heart2</a>
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('heart2Link')">링크 복사하기</button>
+            
+            <h3>Heart 프로젝트</h3>
+            <div class="link-box" id="heartLink">
+                <a href="exp://exp.host/@hsml/heart">exp://exp.host/@hsml/heart</a>
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('heartLink')">링크 복사하기</button>
+            
+            <div class="button-group">
+                <a href="exp://exp.host/@hsml/heart-care-expo?runtime-version=exposdk:50.0.0" class="expo-btn" style="background-color: #FF6D94; margin-right: 10px;">HeartCare 앱 열기</a>
+                <a href="exp://exp.host/@hsml/heart2" class="expo-btn" style="background-color: #4630EB;">Heart2 열기</a>
+                <a href="exp://exp.host/@hsml/heart" class="expo-btn" style="background-color: #4630EB;">Heart 열기</a>
+            </div>
+        </div>
+        
+        <div class="method">
+            <h2>방법 3: 웹 브라우저로 보기</h2>
+            <p>아이폰 및 애플워치 연동이 필요하지 않다면, 웹 브라우저에서 HeartCare 앱에 접속할 수 있습니다:</p>
+            <div class="link-box" id="webLink">
+                <a href="https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev">https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev</a>
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('webLink')">링크 복사하기</button>
+            
+            <div class="button-group">
+                <a href="https://8443d7fb-4abc-4318-95c8-3088b97a682b-00-24335p6eoak4z.riker.replit.dev" class="expo-btn" style="background-color: #FF6D94;">웹 버전 열기</a>
+            </div>
+        </div>
+        
+        <div class="warning">
+            <h3>문제 해결</h3>
+            <p>Expo 앱 연결에 문제가 있을 경우:</p>
+            <ul>
+                <li>Expo Go 앱을 최신 버전으로 업데이트하세요</li>
+                <li>앱을 완전히 종료하고 다시 시작해보세요</li>
+                <li>네트워크 연결이 안정적인지 확인하세요</li>
+                <li>Expo Go 앱에서 로그인 후 시도해보세요</li>
+                <li>URL에 <strong>runtime-version=exposdk:50.0.0</strong> 파라미터가 포함되어 있는지 확인하세요</li>
+                <li>"The request for this experience was malformed" 오류가 나타나면 SDK 버전 불일치 문제입니다</li>
+            </ul>
+        </div>
+        
+        <div class="success">
+            <h3>기존 프로젝트 사용</h3>
+            <p>이미 Expo Go 앱에 연결된 Heart2 또는 HEART 프로젝트를 계속 사용하세요.</p>
+            <p>해당 프로젝트는 이미 연결 설정이 완료되어 있으므로 바로 사용할 수 있습니다.</p>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent.trim();
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = "복사됨!";
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

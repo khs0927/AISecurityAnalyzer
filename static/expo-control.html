@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeartCare Expo 컨트롤 센터</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 { 
+            color: #FF6D94; 
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 10px 5px;
+            background-color: #FF6D94;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color: #ff5c88;
+        }
+        .button.green {
+            background-color: #4CAF50;
+        }
+        .button.green:hover {
+            background-color: #3e8e41;
+        }
+        .button.red {
+            background-color: #f44336;
+        }
+        .button.red:hover {
+            background-color: #d32f2f;
+        }
+        .button.blue {
+            background-color: #2196F3;
+        }
+        .button.blue:hover {
+            background-color: #1976D2;
+        }
+        .button.disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.running {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status.stopped {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status.starting {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .log-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #263238;
+            color: #ECEFF1;
+            font-family: monospace;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        .qr-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 20px auto;
+        }
+        .url-display {
+            padding: 12px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+        }
+        .control-group {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom: 2px solid #FF6D94;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background-color: #323232;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+        .notification.show {
+            opacity: 1;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .connection-links {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .connection-links a {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>낫투데이(HeartCare) Expo 제어 센터</h1>
+    
+    <div class="card full-width">
+        <h2>Expo 서버 상태</h2>
+        <div id="status-display" class="status stopped">확인 중...</div>
+        
+        <div class="control-group">
+            <button id="start-button" class="button green">Expo 서버 시작</button>
+            <button id="stop-button" class="button red">Expo 서버 중지</button>
+            <button id="refresh-button" class="button blue">상태 새로고침</button>
+        </div>
+    </div>
+    
+    <div class="wrapper">
+        <div class="card">
+            <h2>Expo 연결 정보</h2>
+            <div id="url-container">
+                <p>Expo URL:</p>
+                <div id="expo-url" class="url-display">연결 정보 없음</div>
+                
+                <button id="copy-url" class="button">URL 복사</button>
+            </div>
+            
+            <div id="qr-container" style="text-align: center; display: none;">
+                <p>Expo QR 코드:</p>
+                <pre id="qr-code" class="qr-container">QR 코드 대기 중...</pre>
+            </div>
+            
+            <div class="connection-links">
+                <a href="/static/heart-care-connection.html" class="button" target="_blank">연결 페이지</a>
+                <a href="/static/heart-care-debug.html" class="button" target="_blank">디버그 페이지</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Expo 설정 정보</h2>
+            <div class="tabs">
+                <div class="tab active" data-tab="config">구성 정보</div>
+                <div class="tab" data-tab="project">프로젝트 설정</div>
+            </div>
+            
+            <div class="tab-content active" id="config-tab">
+                <p><strong>SDK 버전:</strong> <span id="sdk-version">확인 중...</span></p>
+                <p><strong>Runtime 버전:</strong> <span id="runtime-version">확인 중...</span></p>
+                <p><strong>프로젝트 이름:</strong> <span id="project-name">확인 중...</span></p>
+                <p><strong>앱 슬러그:</strong> <span id="project-slug">확인 중...</span></p>
+            </div>
+            
+            <div class="tab-content" id="project-tab">
+                <p>app.config.js 상태: <span id="app-config-status">확인 중...</span></p>
+                <p>app.json 상태: <span id="app-json-status">확인 중...</span></p>
+                <p>필요한 권한: <span id="permissions">확인 중...</span></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card full-width">
+        <h2>Expo 서버 로그</h2>
+        <div class="control-group">
+            <button id="clear-logs" class="button">로그 지우기</button>
+            <button id="auto-scroll" class="button blue">자동 스크롤 켜기</button>
+        </div>
+        <div id="log-container" class="log-container">
+            <div id="logs">로그 로딩 중...</div>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusDisplay = document.getElementById('status-display');
+            const startButton = document.getElementById('start-button');
+            const stopButton = document.getElementById('stop-button');
+            const refreshButton = document.getElementById('refresh-button');
+            const expoUrl = document.getElementById('expo-url');
+            const qrContainer = document.getElementById('qr-container');
+            const qrCode = document.getElementById('qr-code');
+            const copyUrlButton = document.getElementById('copy-url');
+            const logContainer = document.getElementById('log-container');
+            const logs = document.getElementById('logs');
+            const clearLogsButton = document.getElementById('clear-logs');
+            const autoScrollButton = document.getElementById('auto-scroll');
+            const notification = document.getElementById('notification');
+            
+            // 탭 관련 요소들
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // 구성 정보 요소들
+            const sdkVersion = document.getElementById('sdk-version');
+            const runtimeVersion = document.getElementById('runtime-version');
+            const projectName = document.getElementById('project-name');
+            const projectSlug = document.getElementById('project-slug');
+            const appConfigStatus = document.getElementById('app-config-status');
+            const appJsonStatus = document.getElementById('app-json-status');
+            const permissions = document.getElementById('permissions');
+            
+            // 웹소켓 관련 변수
+            let ws = null;
+            let autoScroll = true;
+            
+            // Expo 상태 관련 변수
+            let expoStatus = 'unknown';
+            let expoUrlValue = null;
+            let expoQrCode = null;
+            
+            // 상태 표시 함수
+            function updateStatus(status) {
+                expoStatus = status;
+                statusDisplay.className = `status ${status}`;
+                
+                if (status === 'running') {
+                    statusDisplay.textContent = 'Expo 서버 실행 중';
+                    startButton.disabled = true;
+                    startButton.classList.add('disabled');
+                    stopButton.disabled = false;
+                    stopButton.classList.remove('disabled');
+                } else if (status === 'stopped') {
+                    statusDisplay.textContent = 'Expo 서버 중지됨';
+                    startButton.disabled = false;
+                    startButton.classList.remove('disabled');
+                    stopButton.disabled = true;
+                    stopButton.classList.add('disabled');
+                } else if (status === 'starting') {
+                    statusDisplay.textContent = 'Expo 서버 시작 중...';
+                    startButton.disabled = true;
+                    startButton.classList.add('disabled');
+                    stopButton.disabled = true;
+                    stopButton.classList.add('disabled');
+                } else if (status === 'stopping') {
+                    statusDisplay.textContent = 'Expo 서버 중지 중...';
+                    startButton.disabled = true;
+                    startButton.classList.add('disabled');
+                    stopButton.disabled = true;
+                    stopButton.classList.add('disabled');
+                }
+            }
+            
+            // URL 표시 함수
+            function updateUrl(url) {
+                if (url) {
+                    expoUrlValue = url;
+                    expoUrl.textContent = url;
+                    copyUrlButton.disabled = false;
+                    copyUrlButton.classList.remove('disabled');
+                } else {
+                    expoUrlValue = null;
+                    expoUrl.textContent = '연결 정보 없음';
+                    copyUrlButton.disabled = true;
+                    copyUrlButton.classList.add('disabled');
+                }
+            }
+            
+            // QR 코드 표시 함수
+            function updateQrCode(qrCode) {
+                if (qrCode) {
+                    expoQrCode = qrCode;
+                    qrContainer.style.display = 'block';
+                    qrCode.textContent = qrCode;
+                } else {
+                    expoQrCode = null;
+                    qrContainer.style.display = 'none';
+                }
+            }
+            
+            // 알림 표시 함수
+            function showNotification(message) {
+                notification.textContent = message;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+            
+            // 웹소켓 연결 함수
+            function connectWebSocket() {
+                // 웹소켓 URL 계산
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/expo-ws`;
+                
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {
+                    console.log('WebSocket connected');
+                    addLogMessage('WebSocket 연결됨');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'status') {
+                            updateStatus(data.status);
+                            if (data.url) updateUrl(data.url);
+                            if (data.qrCode) updateQrCode(data.qrCode);
+                        } else if (data.type === 'log') {
+                            addLogMessage(data.message);
+                        }
+                    } catch (e) {
+                        console.error('WebSocket message error:', e);
+                        addLogMessage(`WebSocket 메시지 오류: ${e.message}`);
+                    }
+                };
+                
+                ws.onclose = function() {
+                    console.log('WebSocket disconnected');
+                    addLogMessage('WebSocket 연결 종료. 3초 후 재연결 시도...');
+                    
+                    // 3초 후 재연결
+                    setTimeout(connectWebSocket, 3000);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    addLogMessage('WebSocket 오류 발생');
+                };
+            }
+            
+            // 로그 메시지 추가 함수
+            function addLogMessage(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                logs.appendChild(logEntry);
+                
+                if (autoScroll) {
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                }
+            }
+            
+            // 상태 새로고침 함수
+            function refreshStatus() {
+                fetch('/api/expo/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        updateStatus(data.status);
+                        if (data.url) updateUrl(data.url);
+                        if (data.qrCode) updateQrCode(data.qrCode);
+                    })
+                    .catch(error => {
+                        console.error('Failed to refresh status:', error);
+                        addLogMessage(`상태 새로고침 실패: ${error.message}`);
+                    });
+            }
+            
+            // 구성 정보 로드 함수
+            function loadConfig() {
+                fetch('/api/expo/config')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.appConfigExists) {
+                            appConfigStatus.textContent = '존재함';
+                        } else {
+                            appConfigStatus.textContent = '존재하지 않음';
+                        }
+                        
+                        if (data.appJson) {
+                            appJsonStatus.textContent = '존재함';
+                            
+                            if (data.appJson.expo) {
+                                const expo = data.appJson.expo;
+                                sdkVersion.textContent = expo.sdkVersion || '미지정';
+                                projectName.textContent = expo.name || '미지정';
+                                projectSlug.textContent = expo.slug || '미지정';
+                                
+                                if (expo.runtimeVersion) {
+                                    if (typeof expo.runtimeVersion === 'object') {
+                                        runtimeVersion.textContent = JSON.stringify(expo.runtimeVersion);
+                                    } else {
+                                        runtimeVersion.textContent = expo.runtimeVersion;
+                                    }
+                                } else {
+                                    runtimeVersion.textContent = '미지정';
+                                }
+                                
+                                // 권한 정보
+                                const permissionList = [];
+                                if (expo.ios && expo.ios.infoPlist) {
+                                    for (const key in expo.ios.infoPlist) {
+                                        if (key.startsWith('NS') && key.endsWith('UsageDescription')) {
+                                            permissionList.push(`iOS: ${key.replace('Usage', '')}`);
+                                        }
+                                    }
+                                }
+                                
+                                if (expo.android && expo.android.permissions) {
+                                    for (const perm of expo.android.permissions) {
+                                        permissionList.push(`Android: ${perm.split('.').pop()}`);
+                                    }
+                                }
+                                
+                                if (permissionList.length > 0) {
+                                    permissions.textContent = permissionList.join(', ');
+                                } else {
+                                    permissions.textContent = '지정된 권한 없음';
+                                }
+                            }
+                        } else {
+                            appJsonStatus.textContent = '존재하지 않음';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Failed to load config:', error);
+                        addLogMessage(`구성 정보 로드 실패: ${error.message}`);
+                    });
+            }
+            
+            // 로그 로드 함수
+            function loadLogs() {
+                fetch('/api/logs')
+                    .then(response => response.text())
+                    .then(data => {
+                        logs.innerHTML = '';
+                        data.split('\n').forEach(line => {
+                            if (line.trim()) {
+                                const logEntry = document.createElement('div');
+                                logEntry.textContent = line;
+                                logs.appendChild(logEntry);
+                            }
+                        });
+                        
+                        if (autoScroll) {
+                            logContainer.scrollTop = logContainer.scrollHeight;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Failed to load logs:', error);
+                        logs.textContent = `로그 로드 실패: ${error.message}`;
+                    });
+            }
+            
+            // 이벤트 리스너 설정
+            startButton.addEventListener('click', function() {
+                if (expoStatus !== 'running' && expoStatus !== 'starting') {
+                    fetch('/api/expo/start', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            updateStatus('starting');
+                            showNotification('Expo 서버 시작 중...');
+                        })
+                        .catch(error => {
+                            console.error('Failed to start Expo:', error);
+                            addLogMessage(`Expo 시작 실패: ${error.message}`);
+                            showNotification('Expo 서버 시작 실패');
+                        });
+                }
+            });
+            
+            stopButton.addEventListener('click', function() {
+                if (expoStatus !== 'stopped' && expoStatus !== 'stopping') {
+                    fetch('/api/expo/stop', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            updateStatus('stopping');
+                            showNotification('Expo 서버 중지 중...');
+                        })
+                        .catch(error => {
+                            console.error('Failed to stop Expo:', error);
+                            addLogMessage(`Expo 중지 실패: ${error.message}`);
+                            showNotification('Expo 서버 중지 실패');
+                        });
+                }
+            });
+            
+            refreshButton.addEventListener('click', function() {
+                refreshStatus();
+                loadLogs();
+                loadConfig();
+                showNotification('상태 새로고침 완료');
+            });
+            
+            copyUrlButton.addEventListener('click', function() {
+                if (expoUrlValue) {
+                    navigator.clipboard.writeText(expoUrlValue)
+                        .then(() => {
+                            showNotification('URL이 클립보드에 복사되었습니다');
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy URL:', err);
+                            showNotification('URL 복사 실패');
+                        });
+                }
+            });
+            
+            clearLogsButton.addEventListener('click', function() {
+                fetch('/api/logs/clear', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        logs.innerHTML = '';
+                        addLogMessage('로그가 지워졌습니다');
+                        showNotification('로그가 지워졌습니다');
+                    })
+                    .catch(error => {
+                        console.error('Failed to clear logs:', error);
+                        showNotification('로그 지우기 실패');
+                    });
+            });
+            
+            autoScrollButton.addEventListener('click', function() {
+                autoScroll = !autoScroll;
+                
+                if (autoScroll) {
+                    autoScrollButton.textContent = '자동 스크롤 끄기';
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                } else {
+                    autoScrollButton.textContent = '자동 스크롤 켜기';
+                }
+            });
+            
+            // 탭 전환 이벤트 리스너
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // 탭 활성화
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 탭 콘텐츠 활성화
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+            
+            // 초기화
+            updateStatus('stopped');
+            updateUrl(null);
+            connectWebSocket();
+            refreshStatus();
+            loadLogs();
+            loadConfig();
+        });
+    </script>
+</body>
+</html>

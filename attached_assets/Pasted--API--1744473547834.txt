@@ -1,0 +1,517 @@
+# 카카오맵 API 통합 문제 해결 가이드
+
+제공된 스크린샷을 검토한 결과, 카카오맵은 로드되고 있으나 검색 기능, 현재 위치 표시, 병원 검색 등의 핵심 기능이 작동하지 않는 것으로 보입니다. 이러한 문제를 해결하기 위한 종합적인 수정 방안을 제시합니다.
+
+## 주요 문제점 분석
+
+1. API 키 설정 문제
+2. 위치 권한 획득 실패
+3. 검색 기능 미구현
+4. 현재 위치 연동 오류
+
+## 해결책: 수정된 코드
+
+아래는 검색, 현재 위치, 병원 검색 기능을 모두 통합한 수정 코드입니다:
+
+```javascript
+import React, { useEffect, useRef, useState } from 'react';
+import { MapPin, Navigation, AlertCircle, Loader2, RefreshCw, Search } from 'lucide-react';
+
+// 카카오맵 스크립트 로드 함수
+const loadKakaoMapScript = (callback) => {
+  // 이미 로드된 경우 바로 콜백 실행
+  if (window.kakao && window.kakao.maps) {
+    callback();
+    return;
+  }
+  
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  // 필수: 카카오 개발자센터에서 발급받은 앱키로 변경
+  // libraries=services: 검색 기능 사용을 위해 필요
+  script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_MAP_API_KEY&libraries=services,clusterer&autoload=false`;
+  script.async = true;
+  
+  script.onload = () => {
+    window.kakao.maps.load(() => {
+      console.log('카카오맵 로드 완료');
+      callback();
+    });
+  };
+  
+  script.onerror = (error) => {
+    console.error('카카오맵 로드 실패:', error);
+  };
+  
+  document.head.appendChild(script);
+};
+
+const KakaoMap = ({ className = "" }) => {
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+  const infowindowRef = useRef(null);
+  const placesServiceRef = useRef(null);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [hospitals, setHospitals] = useState([]);
+  
+  // 지도 초기화
+  const initializeMap = () => {
+    if (!mapContainerRef.current) {
+      console.error('지도 컨테이너를 찾을 수 없습니다.');
+      setMapError('지도를 표시할 수 없습니다.');
+      setIsLoading(false);
+      return;
+    }
+    
+    // 기본 위치 (서울시청)
+    const defaultPosition = new window.kakao.maps.LatLng(37.5666, 126.9779);
+    const options = {
+      center: defaultPosition,
+      level: 3
+    };
+    
+    try {
+      // 지도 생성
+      const map = new window.kakao.maps.Map(mapContainerRef.current, options);
+      mapInstanceRef.current = map;
+      
+      // 장소 검색 객체 생성
+      placesServiceRef.current = new window.kakao.maps.services.Places();
+      
+      // 인포윈도우 생성
+      infowindowRef.current = new window.kakao.maps.InfoWindow({ zIndex: 1 });
+      
+      // 현재 위치 가져오기
+      getUserLocation();
+      
+      setIsLoading(false);
+      console.log('지도 초기화 완료');
+    } catch (error) {
+      console.error('지도 초기화 오류:', error);
+      setMapError('지도를 불러오는 중 오류가 발생했습니다.');
+      setIsLoading(false);
+    }
+  };
+  
+  // 현재 위치 가져오기
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const locPosition = new window.kakao.maps.LatLng(latitude, longitude);
+          
+          console.log('현재 위치:', latitude, longitude);
+          setUserLocation({ lat: latitude, lng: longitude });
+          
+          // 지도 중심 이동
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.setCenter(locPosition);
+            
+            // 현재 위치 마커 표시
+            displayUserMarker(locPosition);
+            
+            // 주변 병원 검색 (자동)
+            searchNearbyHospitals(latitude, longitude);
+          }
+        },
+        (error) => {
+          console.error('위치 정보 가져오기 실패:', error);
+          // 위치 권한 거부 등의 오류 발생 시 사용자에게 알림
+          let errorMessage = '현재 위치를 가져올 수 없습니다.';
+          
+          if (error.code === 1) {
+            errorMessage = '위치 액세스 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
+          }
+          
+          setMapError(errorMessage);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+    } else {
+      setMapError('이 브라우저에서는 위치 서비스를 지원하지 않습니다.');
+    }
+  };
+  
+  // 현재 위치 마커 표시
+  const displayUserMarker = (locPosition) => {
+    // 기존 마커 제거
+    if (markerRef.current) {
+      markerRef.current.setMap(null);
+    }
+    
+    // 현재 위치 표시 스타일의 마커 생성
+    const imageSrc = '//t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png';
+    const imageSize = new window.kakao.maps.Size(24, 35);
+    const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize);
+    
+    const marker = new window.kakao.maps.Marker({
+      map: mapInstanceRef.current,
+      position: locPosition,
+      image: markerImage
+    });
+    
+    markerRef.current = marker;
+    
+    // 인포윈도우에 표시될 내용
+    const message = '현재 위치';
+    
+    // 인포윈도우 표시
+    infowindowRef.current.setContent(message);
+    infowindowRef.current.open(mapInstanceRef.current, marker);
+    
+    // 3초 후 인포윈도우 닫기
+    setTimeout(() => {
+      if (infowindowRef.current) {
+        infowindowRef.current.close();
+      }
+    }, 3000);
+  };
+  
+  // 키워드 검색
+  const searchPlaces = () => {
+    if (!searchKeyword.trim()) {
+      alert('검색어를 입력해주세요!');
+      return;
+    }
+    
+    if (!placesServiceRef.current) {
+      setMapError('검색 서비스를 불러올 수 없습니다.');
+      return;
+    }
+    
+    // 장소 검색 요청
+    placesServiceRef.current.keywordSearch(searchKeyword, (data, status) => {
+      if (status === window.kakao.maps.services.Status.OK) {
+        console.log('검색 결과:', data);
+        setSearchResults(data);
+        
+        // 검색 결과에 따라 지도 범위 재설정
+        displayPlaces(data);
+      } else if (status === window.kakao.maps.services.Status.ZERO_RESULT) {
+        alert('검색 결과가 존재하지 않습니다.');
+        setSearchResults([]);
+      } else if (status === window.kakao.maps.services.Status.ERROR) {
+        alert('검색 중 오류가 발생했습니다.');
+        setSearchResults([]);
+      }
+    });
+  };
+  
+  // 검색 결과 지도에 표시
+  const displayPlaces = (places) => {
+    // 기존 마커, 인포윈도우 제거
+    removeAllMarkers();
+    if (infowindowRef.current) {
+      infowindowRef.current.close();
+    }
+    
+    const bounds = new window.kakao.maps.LatLngBounds();
+    
+    places.forEach((place) => {
+      // 마커 생성
+      const marker = new window.kakao.maps.Marker({
+        map: mapInstanceRef.current,
+        position: new window.kakao.maps.LatLng(place.y, place.x)
+      });
+      
+      // 마커 이벤트 등록
+      window.kakao.maps.event.addListener(marker, 'click', function() {
+        // 인포윈도우에 표시할 내용
+        const content = `
+          
+            ${place.place_name}
+            ${place.road_address_name || place.address_name}
+            ${place.phone || ''}
+          
+        `;
+        
+        // 인포윈도우 표시
+        infowindowRef.current.setContent(content);
+        infowindowRef.current.open(mapInstanceRef.current, marker);
+      });
+      
+      // 검색된 장소 위치를 기준으로 지도 범위 재설정
+      bounds.extend(new window.kakao.maps.LatLng(place.y, place.x));
+    });
+    
+    // 검색 결과 기준으로 지도 범위 재설정
+    mapInstanceRef.current.setBounds(bounds);
+  };
+  
+  // 주변 병원 검색
+  const searchNearbyHospitals = (lat, lng) => {
+    if (!placesServiceRef.current) {
+      console.error('장소 검색 서비스를 사용할 수 없습니다.');
+      return;
+    }
+    
+    // 카테고리: HP8(병원), 위치 기반 검색
+    placesServiceRef.current.keywordSearch('병원', (data, status) => {
+      if (status === window.kakao.maps.services.Status.OK) {
+        console.log('주변 병원:', data);
+        setHospitals(data);
+        
+        // 병원 마커 표시
+        displayHospitals(data);
+      }
+    }, {
+      location: new window.kakao.maps.LatLng(lat, lng),
+      radius: 3000, // 3km 반경 내 검색
+      category_group_code: 'HP8' // 병원 카테고리
+    });
+  };
+  
+  // 병원 마커 표시
+  const displayHospitals = (hospitals) => {
+    if (!mapInstanceRef.current) return;
+    
+    hospitals.forEach((hospital) => {
+      // 병원 마커 이미지 설정
+      const imageSrc = '//t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png';
+      const imageSize = new window.kakao.maps.Size(24, 35);
+      const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize);
+      
+      // 병원 마커 생성
+      const marker = new window.kakao.maps.Marker({
+        map: mapInstanceRef.current,
+        position: new window.kakao.maps.LatLng(hospital.y, hospital.x),
+        image: markerImage
+      });
+      
+      // 클릭 이벤트
+      window.kakao.maps.event.addListener(marker, 'click', function() {
+        // 인포윈도우에 표시할 내용
+        const content = `
+          
+            ${hospital.place_name}
+            ${hospital.road_address_name || hospital.address_name}
+            ${hospital.phone || ''}
+          
+        `;
+        
+        // 인포윈도우 표시
+        infowindowRef.current.setContent(content);
+        infowindowRef.current.open(mapInstanceRef.current, marker);
+      });
+    });
+  };
+  
+  // 모든 마커 제거
+  const removeAllMarkers = () => {
+    // 현재 위치 마커는 유지
+    // 추가적인 마커 제거 로직 필요시 구현
+  };
+  
+  // 현재 위치로 이동
+  const moveToCurrentLocation = () => {
+    getUserLocation();
+  };
+  
+  // 현재 위치에서 병원 검색
+  const searchHospitalsAtCurrentLocation = () => {
+    if (userLocation) {
+      searchNearbyHospitals(userLocation.lat, userLocation.lng);
+    } else {
+      getUserLocation();
+    }
+  };
+  
+  // 초기 로드
+  useEffect(() => {
+    setIsLoading(true);
+    loadKakaoMapScript(() => {
+      initializeMap();
+    });
+    
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      if (infowindowRef.current) {
+        infowindowRef.current.close();
+      }
+    };
+  }, []);
+  
+  // 로딩 중 UI
+  if (isLoading) {
+    return (
+      
+        
+          
+          지도를 불러오는 중입니다...
+        
+      
+    );
+  }
+  
+  // 에러 UI
+  if (mapError) {
+    return (
+      
+        
+          
+          지도 로드 실패
+          {mapError}
+           {
+              setMapError(null);
+              setIsLoading(true);
+              initializeMap();
+            }}
+          >
+            
+            다시 시도
+          
+        
+      
+    );
+  }
+  
+  // 정상 UI
+  return (
+    
+      {/* 검색 패널 */}
+      
+        
+           setSearchKeyword(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && searchPlaces()}
+          />
+          
+            
+          
+        
+      
+      
+      {/* 컨트롤 패널 */}
+      
+        
+          
+        
+        
+          
+        
+      
+      
+      {/* 지도 컨테이너 */}
+      
+      
+      {/* 검색 결과 목록 (옵션) */}
+      {searchResults.length > 0 && (
+        
+          검색 결과
+          
+            {searchResults.map((result, index) => (
+               {
+                  // 해당 위치로 지도 이동
+                  const position = new window.kakao.maps.LatLng(result.y, result.x);
+                  mapInstanceRef.current.setCenter(position);
+                  mapInstanceRef.current.setLevel(3);
+                  
+                  // 인포윈도우 표시
+                  if (infowindowRef.current) {
+                    const content = `
+                      
+                        ${result.place_name}
+                        ${result.road_address_name || result.address_name}
+                        ${result.phone || ''}
+                      
+                    `;
+                    infowindowRef.current.setContent(content);
+                    infowindowRef.current.open(mapInstanceRef.current, 
+                      new window.kakao.maps.Marker({
+                        position: position,
+                        map: mapInstanceRef.current
+                      })
+                    );
+                  }
+                }}
+              >
+                {result.place_name}
+                {result.road_address_name || result.address_name}
+                {result.phone && {result.phone}}
+              
+            ))}
+          
+        
+      )}
+    
+  );
+};
+
+export default KakaoMap;
+```
+
+## 해결된 문제점
+
+1. **API 키 설정 문제:**
+   - `YOUR_KAKAO_MAP_API_KEY`를 카카오 개발자센터에서 발급받은 JavaScript 키로 변경해야 합니다.
+   - API 키 뒤에 `libraries=services`를 추가하여 검색 기능 사용을 위한 라이브러리를 로드합니다.
+
+2. **위치 권한 획득 문제:**
+   - `navigator.geolocation` API를 사용하여 위치 정보를 요청합니다.
+   - 위치 권한 거부 시 사용자에게 알림을 표시합니다.
+   - `enableHighAccuracy: true` 옵션을 추가하여 정확한 위치를 얻습니다.
+
+3. **검색 기능 구현:**
+   - 검색창을 상단에 추가하고 `keywordSearch` 메서드를 사용하여 검색 기능을 구현합니다.
+   - 검색 결과를 지도에 마커로 표시하고, 결과 목록을 하단에 표시합니다.
+
+4. **현재 위치 연동:**
+   - 현재 위치를 가져와서 지도 중심으로 설정합니다.
+   - 현재 위치 버튼을 추가하여 언제든지 현재 위치로 돌아갈 수 있게 합니다.
+
+5. **병원 검색 기능:**
+   - 카테고리 코드 'HP8'을 사용하여 주변 병원을 검색합니다.
+   - 현재 위치를 기준으로 3km 반경 내 병원을 검색합니다.
+
+## 주요 변경사항
+
+1. 카카오맵 스크립트 로드 방식 개선
+2. 위치 서비스와 검색 서비스 통합
+3. 사용자 친화적인 UI 추가 (로딩, 에러 상태 처리)
+4. 현재 위치 버튼과 병원 검색 버튼 추가
+5. 검색 결과 표시 및 클릭 이벤트 처리
+
+## 구현 시 주의사항
+
+1. **API 키 설정:** 반드시 카카오 개발자센터에서 발급받은 JavaScript 키를 사용하세요.
+2. **도메인 등록:** 카카오 개발자센터에서 사용할 웹 도메인을 등록해야 합니다.
+3. **HTTPS 요구:** Chrome 등 최신 브라우저에서는 위치 서비스 사용 시 HTTPS가 필요합니다.
+4. **사용자 권한:** 위치 정보 사용 전 사용자 동의를 받아야 합니다.
+
+위 코드를 적용하면 검색, 현재 위치 표시, 병원 검색 기능이 모두 정상적으로 작동할 것입니다.
+
+Citations:
+[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/53686762/e4219152-5215-42b5-8019-db2f6d4d1064/paste-1.txt
+[2] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/53686762/6c60c80f-65cc-4a16-924a-aa4a9365e039/paste-2.txt
+[3] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/53686762/9d863c94-ac33-49af-91c0-b34498bba29d/paste-3.txt
+[4] https://pplx-res.cloudinary.com/image/upload/v1744473235/user_uploads/zwZvRHktxwVMndm/image.jpg
+[5] https://pplx-res.cloudinary.com/image/upload/v1744473240/user_uploads/BgRbPHqtnbNAFOm/image.jpg
+[6] https://www.designkits.co.kr/blog/know-how/KAKAO-MAP-API
+[7] https://itwithruilan.tistory.com/105
+[8] https://velog.io/@acwell94/%EC%B9%B4%EC%B9%B4%EC%98%A4-%EC%A7%80%EB%8F%84-api%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%B4%EC%84%9C-%ED%82%A4%EC%9B%8C%EB%93%9C-%EA%B2%80%EC%83%89-%ED%9B%84-%EB%A7%88%EC%BB%A4-%EC%9D%B4%EB%8F%99%ED%95%98%EA%B8%B0-%EA%B5%AC%ED%98%84
+[9] https://goni95.tistory.com/89
+[10] https://developers.kakao.com/docs/latest/en/kakaotalk-social/trouble-shooting
+[11] https://publicapi.dev/kakao-maps-api
+[12] https://apis.map.kakao.com/web/sample/geolocationMarker/
+[13] https://startedev-jay.tistory.com/15
+[14] https://developers.kakao.com/docs/latest/en/kakaomap/common
+[15] https://developers.kakao.com/docs/latest/en/kakaologin/trouble-shooting
+[16] https://apis.map.kakao.com/web/guide/
+[17] https://apis.map.kakao.com/web/sample/addr2coord/
+[18] https://krrong.tistory.com/entry/Android-Kakao-Map-API-%EC%82%AC%EC%9A%A9%EB%B0%A9%EB%B2%954-%EB%A7%88%EC%BB%A4%EC%B0%8D%EA%B8%B0?category=1001156
+[19] https://yeon-ju-k.tistory.com/183
+[20] https://developers.kakao.com/docs/latest/en/rest-api/reference
+[21] https://apis.map.kakao.com/web/documentation/
+[22] https://apis.map.kakao.com/web/sample/
+[23] https://velog.io/@joshua_1203/kakao-map-API%EC%9D%84-%EC%82%AC%EC%9A%A9%ED%95%B4-%EC%A7%80%EB%8F%84%EB%A5%BC-%EB%9D%84%EC%9B%8C%EB%B3%B4%EC%9E%90
+[24] https://velog.io/@just_coding/Kakao-Map-1-%EA%B8%B0%EB%B3%B8-%EC%84%A4%EC%A0%95
+[25] https://velog.io/@a_in/migrate-to-Kakao-Map-API-with-Errors
+
+---
+Perplexity로부터의 답변: pplx.ai/share

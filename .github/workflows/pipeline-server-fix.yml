@@ -1,0 +1,121 @@
+name: "① 서버 타입스크립트 오류 수정"
+
+on:
+  push:
+    branches: [fix/server-typescript]
+  workflow_dispatch:
+    inputs:
+      auto_merge:
+        description: '자동으로 main에 머지하기'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  NODE_VERSION: 18
+
+jobs:
+  fix-server-ts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install server dependencies
+        run: |
+          cd server
+          npm ci
+      
+      - name: Check for TypeScript errors
+        id: ts-check
+        run: |
+          cd server
+          npx tsc --noEmit || echo "TS_ERRORS=true" >> $GITHUB_ENV
+      
+      - name: Fix TypeScript errors
+        if: env.TS_ERRORS == 'true'
+        run: |
+          cd server
+          
+          # 1. tsconfig.json 업데이트
+          echo '{
+            "compilerOptions": {
+              "target": "es2020",
+              "module": "commonjs",
+              "lib": ["es2020", "dom"],
+              "outDir": "./dist",
+              "rootDir": "./src",
+              "strict": true,
+              "esModuleInterop": true,
+              "skipLibCheck": true,
+              "forceConsistentCasingInFileNames": true,
+              "resolveJsonModule": true,
+              "moduleResolution": "node",
+              "baseUrl": ".",
+              "paths": {
+                "@/*": ["src/*"]
+              }
+            },
+            "include": ["src/**/*"],
+            "exclude": ["node_modules", "dist"]
+          }' > tsconfig.json
+          
+          # 2. 타입 문제 자동 수정
+          find src -name "*.ts" -exec npx ts-fix-all --tsconfig tsconfig.json {} \;
+          
+          # 3. 빠진 타입 선언 추가
+          npm i -D @types/node @types/express @types/cors @types/morgan
+          
+          # 4. 수정 후 타입체크 다시 실행
+          npx tsc --noEmit || echo "STILL_HAS_ERRORS=true" >> $GITHUB_ENV
+      
+      - name: Commit changes if any
+        if: env.TS_ERRORS == 'true'
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git commit -m "🤖 Fix TypeScript errors in server" || echo "No changes to commit"
+          git push origin HEAD
+      
+      - name: Create PR to main
+        if: env.TS_ERRORS == 'true' && github.event.inputs.auto_merge != 'false'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "🤖 Fix TypeScript errors in server"
+          body: |
+            서버의 타입스크립트 오류를 자동으로 수정했습니다.
+            - tsconfig.json 업데이트
+            - 타입 정의 추가
+            - 기타 타입 오류 수정
+            
+            이 PR은 자동으로 생성되었습니다.
+          branch: fix/server-typescript
+          base: main
+      
+      - name: Merge PR to main
+        if: env.TS_ERRORS == 'true' && github.event.inputs.auto_merge == 'true' && env.STILL_HAS_ERRORS != 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: fix/server-typescript
+          base: main
+          title: "🤖 서버 타입스크립트 오류 수정"
+          body: "서버 타입스크립트 오류가 모두 수정되었습니다."
+          delete-branch: true
+          auto-merge: true
+      
+      - name: Trigger next pipeline
+        if: success() && env.STILL_HAS_ERRORS != 'true' && github.event.inputs.auto_merge == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: trigger-pipeline-home-graph
+          client-payload: '{"auto_merge": true}' 

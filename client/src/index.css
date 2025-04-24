@@ -1,0 +1,517 @@
+@import url('https://cdn.jsdelivr.net/gh/sunn-us/SUITE/fonts/static/woff2/SUITE.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 애니메이션 */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 108, 247, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(74, 108, 247, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 108, 247, 0);
+  }
+}
+
+/* 알람 벨 애니메이션 */
+@keyframes bell-ring {
+  0%, 100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(10deg);
+  }
+  40% {
+    transform: rotate(-10deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+  80% {
+    transform: rotate(-5deg);
+  }
+}
+
+.animate-bell {
+  animation: bell-ring 0.5s ease;
+}
+
+/* 119 버튼 동적 효과 애니메이션 */
+@keyframes emergencyPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 58, 58, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 58, 58, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 58, 58, 0);
+  }
+}
+
+@keyframes emergency-ripple {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+.emergency-pulse-button {
+  animation: emergencyPulse 1.5s infinite;
+  position: relative;
+}
+
+.emergency-pulse-effect {
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+  animation: emergency-ripple 2s infinite;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.float-animation {
+  animation: float 4s ease-in-out infinite;
+}
+
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+/* 추가 유틸리티 클래스들 */
+.text-gradient-blue {
+  background: linear-gradient(135deg, #6e8efb 0%, #4a6cf7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.text-gradient-purple {
+  background: linear-gradient(135deg, #a960ee 0%, #8d4de8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.text-gradient-pink {
+  background: linear-gradient(135deg, #ff8eb4 0%, #ed5e98 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-[#f5f7fa] text-foreground;
+    font-family: 'SUITE', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* 토스트 알림 스타일 */
+  .toast-gradient {
+    background: linear-gradient(to right, rgba(255,109,148,0.95), rgba(255,109,148,0.85)) !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 500 !important;
+    box-shadow: 0 4px 12px rgba(255, 109, 148, 0.4) !important;
+    opacity: 1;
+    animation: fadeOut 5s ease forwards;
+  }
+  
+  @keyframes fadeOut {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  
+  /* 모니터링 가이드라인과 알림창 스타일 개선 */
+  .alert-pink {
+    background-color: rgba(255, 214, 228, 0.9) !important;
+    border-color: #FF6D70 !important;
+    color: #ff3c75 !important;
+  }
+  
+  .alert-pink .alert-title {
+    color: #ff3c75 !important;
+    font-weight: 600 !important;
+  }
+  
+  .alert-pink .alert-description {
+    color: #ff3c75 !important;
+    font-weight: 500 !important;
+  }
+  
+  /* Flutter 스타일 배경 그라데이션 - 분홍계열로 통일 */
+  .bg-flutter-gradient {
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+  }
+  
+  /* 모던 UI 애니메이션 */
+  .modern-transition {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+    transition-duration: 300ms;
+  }
+  
+  /* 현대적 아이콘 활성화 애니메이션 */
+  .modern-icon-active {
+    transform: scale(0.92);
+    transition: transform 0.15s ease-out;
+  }
+  
+  /* 링크 스타일 버튼 */
+  .modern-button {
+    @apply rounded-full bg-white text-gray-700 font-medium py-3 px-6 text-sm;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border: none;
+  }
+  
+  /* 카카오맵 스타일 */
+  .map-container {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+    /* 모든 마커의 기본 스타일 통일 */
+  .hospital-marker, .general-hospital-marker, .emergency-marker, .heart-marker, .emergency-marker-24h {
+    @apply text-white font-bold rounded-full flex items-center justify-center;
+    width: 30px;
+    height: 30px;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 일반 병원 마커 */
+  .hospital-marker {
+    @apply bg-[#FF6D70];
+    font-size: 14px;
+  }
+  
+  /* 종합병원 마커 스타일 - "종" 아이콘 */
+  .general-hospital-marker {
+    @apply bg-blue-600;
+    font-size: 14px;
+  }
+  
+  /* 응급의료센터 마커 스타일 - 붉은 배경에 느낌표 */
+  .emergency-marker {
+    @apply bg-red-600 font-extrabold;
+    font-size: 16px;
+    font-weight: 900;
+  }
+  
+  /* 심장전문 마커 스타일 - 심장 모양 아이콘 */
+  .heart-marker {
+    @apply bg-[#FF6D70];
+    font-size: 16px;
+  }
+  
+  /* 24시간 병원 마커 스타일 - 녹색 배경에 24 표시 */
+  .emergency-marker-24h {
+    @apply bg-green-600;
+    font-size: 12px;
+  }
+
+  .hospital-info-window {
+    @apply bg-white rounded-lg p-3 shadow-lg text-left;
+    min-width: 200px;
+    max-width: 300px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .hospital-info-window h4 {
+    @apply text-gray-800 font-bold text-sm mb-1;
+  }
+
+  .hospital-info-window p {
+    @apply text-gray-600 text-xs mb-1;
+  }
+
+  .hospital-list {
+    @apply absolute bottom-3 left-3 right-3 bg-[#F8F9FA] p-3 rounded-xl shadow-md z-10;
+    max-height: 40%;
+    overflow-y: auto;
+  }
+  
+  .my-location-marker {
+    @apply bg-[#FF6D70] rounded-full;
+    width: 14px;
+    height: 14px;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px rgba(255, 109, 148, 0.4);
+  }
+  
+  .modern-button-primary {
+    @apply rounded-full font-medium py-3 px-6 text-sm text-white;
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+    box-shadow: 0 8px 15px rgba(255, 92, 141, 0.25);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border: none;
+  }
+  
+  .modern-button-purple {
+    @apply rounded-full font-medium py-3 px-6 text-sm text-white;
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+    box-shadow: 0 8px 15px rgba(255, 92, 141, 0.25);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border: none;
+  }
+  
+  .modern-button-pink {
+    @apply rounded-full font-medium py-3 px-6 text-sm text-white;
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+    box-shadow: 0 8px 15px rgba(255, 92, 141, 0.25);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border: none;
+  }
+  
+  .modern-button:hover, .modern-button-primary:hover, .modern-button-purple:hover, .modern-button-pink:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .modern-button:active, .modern-button-primary:active, .modern-button-purple:active, .modern-button-pink:active {
+    transform: translateY(1px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 작은 버튼 스타일 */
+  .button-sm {
+    @apply rounded-full bg-white text-gray-700 font-medium py-2 px-4 text-xs;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s ease;
+    border: none;
+  }
+  
+  .button-sm-primary {
+    @apply rounded-full text-white font-medium py-2 px-4 text-xs;
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+    box-shadow: 0 5px 10px rgba(255, 92, 141, 0.2);
+    transition: all 0.3s ease;
+    border: none;
+  }
+  
+  /* 현대적 카드 스타일 - 링크에 맞게 수정 */
+  .modern-card {
+    @apply rounded-3xl bg-white shadow-sm border border-gray-100 p-5 transition-all duration-300;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.05);
+  }
+  
+  .modern-card-highlight {
+    @apply rounded-3xl p-5 transition-all duration-300;
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+    color: white;
+    box-shadow: 0 10px 25px rgba(255, 92, 141, 0.3);
+    border: none;
+  }
+  
+  .modern-card-gradient {
+    @apply rounded-3xl p-5 transition-all duration-300;
+    background: linear-gradient(135deg, rgb(255, 245, 248) 0%, rgb(255, 240, 245) 100%);
+    border: 1px solid rgba(255, 92, 141, 0.1);
+    box-shadow: 0 5px 15px rgba(255, 92, 141, 0.05);
+  }
+  
+  .modern-card-purple {
+    @apply rounded-3xl p-5 transition-all duration-300;
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+    color: white;
+    box-shadow: 0 10px 25px rgba(255, 92, 141, 0.3);
+    border: none;
+  }
+  
+  .modern-card-pink {
+    @apply rounded-3xl p-5 transition-all duration-300;
+    background: linear-gradient(135deg, #F78DA7 0%, #FF5C8D 100%);
+    color: white;
+    box-shadow: 0 10px 25px rgba(255, 92, 141, 0.3);
+    border: none;
+  }
+  
+  .modern-card-dark {
+    @apply rounded-3xl p-5 transition-all duration-300 text-white border-none;
+    background: linear-gradient(135deg, #2b3040 0%, #1c212e 100%);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .modern-card:active {
+    @apply transform scale-[0.98];
+  }
+  
+  /* SUITE 폰트 스타일 클래스 */
+  .font-suite {
+    font-family: 'SUITE', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+  
+  /* 색상 테마 유틸리티 클래스 */
+  .text-primary-dark {
+    @apply text-primary/90;
+  }
+  
+  .text-primary-light {
+    @apply text-primary/70;
+  }
+  
+  .bg-primary-gradient {
+    @apply bg-gradient-to-br from-primary/80 to-primary;
+  }
+  
+  .bg-primary-light {
+    @apply bg-primary/10;
+  }
+  
+  .bg-gray-gradient {
+    @apply bg-gradient-to-br from-gray-50 to-gray-100;
+  }
+  
+  .border-primary-light {
+    @apply border-primary/30;
+  }
+  
+  /* 현대적 그림자 */
+  .modern-shadow {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+  
+  .modern-shadow-lg {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  
+  /* 현대적 인디케이터와 상태 배지 */
+  .modern-badge {
+    @apply rounded-full px-3 py-1 text-xs font-medium;
+  }
+  
+  .modern-badge-primary {
+    background: linear-gradient(135deg, rgba(247, 141, 167, 0.15) 0%, rgba(255, 92, 141, 0.15) 100%);
+    color: #FF5C8D;
+  }
+  
+  .modern-badge-purple {
+    background: linear-gradient(135deg, rgba(247, 141, 167, 0.15) 0%, rgba(255, 92, 141, 0.15) 100%);
+    color: #FF5C8D;
+  }
+  
+  .modern-badge-pink {
+    background: linear-gradient(135deg, rgba(247, 141, 167, 0.15) 0%, rgba(255, 92, 141, 0.15) 100%);
+    color: #F78DA7;
+  }
+  
+  .modern-badge-success {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%);
+    color: #16a34a;
+  }
+  
+  .modern-badge-warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.15) 100%);
+    color: #d97706;
+  }
+  
+  .modern-badge-danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);
+    color: #dc2626;
+  }
+  
+  /* 상태 인디케이터 */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+  
+  /* 깔끔한 입력 폼 요소들 */
+  .modern-input {
+    @apply rounded-xl border border-gray-200 bg-[#f8fafb] px-4 py-2.5 text-sm outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 w-full;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  /* 정보 상자 */
+  .info-box {
+    @apply rounded-xl bg-blue-50 text-blue-700 p-3 text-sm my-2;
+  }
+  
+  .warning-box {
+    @apply rounded-xl bg-amber-50 text-amber-700 p-3 text-sm my-2;
+  }
+  
+  /* 뱃지 컬렉션 */
+  .tag-badge {
+    @apply rounded-lg bg-gray-100 text-gray-600 px-2.5 py-1 text-xs font-medium mr-1.5 mb-1.5 inline-block;
+  }
+  
+  /* 데이터 표시 */
+  .data-row {
+    @apply flex justify-between items-center py-2 border-b border-gray-100 last:border-none;
+  }
+  
+  .data-label {
+    @apply text-sm text-gray-500;
+  }
+  
+  .data-value {
+    @apply text-sm font-medium text-gray-800;
+  }
+  
+  /* 건강 측정 항목 표시 */
+  .health-metric {
+    @apply flex flex-col p-3 rounded-xl bg-white border border-gray-100 modern-shadow;
+  }
+  
+  .health-metric-label {
+    @apply text-xs text-gray-500 mb-1;
+  }
+  
+  .health-metric-value {
+    @apply text-lg font-semibold text-primary-dark;
+  }
+  
+  /* 토스트 스타일 알림 */
+  .toast-notification {
+    @apply fixed top-4 left-1/2 transform -translate-x-1/2 bg-white rounded-2xl p-4 shadow-lg border border-gray-200 z-50 max-w-xs w-full;
+    animation: toast-slide-down 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  @keyframes toast-slide-down {
+    from {
+      transform: translate(-50%, -20px);
+      opacity: 0;
+    }
+    to {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
+  }
+}

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HEART - 멀티모달 위험도 계산기</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+  <link
+    rel="stylesheet"
+    as="style"
+    onload="this.rel='stylesheet'"
+    href="https://fonts.googleapis.com/css2?display=swap&amp;family=Manrope%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+  />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <style>
+    body {
+      font-family: 'Manrope', 'Noto Sans', sans-serif;
+      background-color: #F8FAFB;
+    }
+    
+    .risk-gauge {
+      position: relative;
+      width: 200px;
+      height: 100px;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+    
+    .risk-gauge-bg {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 20px solid #f0f0f0;
+      border-bottom-color: transparent;
+      border-left-color: transparent;
+      border-right-color: transparent;
+      box-sizing: border-box;
+    }
+    
+    .risk-gauge-fill {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 20px solid;
+      border-bottom-color: transparent;
+      border-left-color: transparent;
+      border-right-color: transparent;
+      box-sizing: border-box;
+      transform: rotate(0deg);
+      transition: transform 0.5s ease-in-out, border-color 0.5s ease-in-out;
+    }
+    
+    .risk-gauge-indicator {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    .card-with-shadow {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .ecg-line {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: dash 15s linear forwards;
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    .sleep-mode-switch {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #0e151b;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-subtitle {
+      font-size: 0.875rem;
+      color: #507695;
+      margin-bottom: 1rem;
+    }
+
+    .primary-button {
+      background-color: #2c90e2;
+      color: white;
+      border-radius: 0.75rem;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .primary-button:hover {
+      background-color: #2276c0;
+    }
+
+    .badge {
+      border-radius: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-blue {
+      background-color: #e8eef3;
+      color: #2c90e2;
+    }
+
+    .badge-yellow {
+      background-color: #fff8e6;
+      color: #f59e0b;
+    }
+
+    .badge-red {
+      background-color: #fee2e2;
+      color: #ef4444;
+    }
+
+    .badge-green {
+      background-color: #dcfce7;
+      color: #10b981;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-lg">
+    <!-- 상단 내비게이션 -->
+    <div class="flex items-center bg-[#f8fafb] justify-between mb-4">
+      <a href="index.html" class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="#0e151b" viewBox="0 0 256 256">
+          <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
+        </svg>
+      </a>
+      <h1 class="text-lg font-bold text-[#0e151b]">멀티모달 위험도 계산기</h1>
+      <div class="w-10 h-10"></div> <!-- 균형용 빈 공간 -->
+    </div>
+
+    <!-- 앱 버전 배지 -->
+    <div class="flex justify-center mb-4">
+      <span class="badge badge-blue">Multimodal-MCP Engine v3.0.2</span>
+    </div>
+
+    <!-- 사용자/보호자 탭 -->
+    <div class="flex px-2 py-2 mb-4">
+      <div class="flex h-10 flex-1 items-center justify-center rounded-xl bg-[#e8eef3] p-1">
+        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-xl px-2 has-[:checked]:bg-[#f8fafb] has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#0e151b] text-[#507695] text-sm font-medium leading-normal">
+          <span class="truncate">사용자 모드</span>
+          <input type="radio" name="user-mode" class="invisible w-0" value="user" checked />
+        </label>
+        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-xl px-2 has-[:checked]:bg-[#f8fafb] has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#0e151b] text-[#507695] text-sm font-medium leading-normal">
+          <span class="truncate">보호자 모드</span>
+          <input type="radio" name="user-mode" class="invisible w-0" value="guardian" />
+        </label>
+      </div>
+    </div>
+
+    <!-- 위험도 게이지 카드 -->
+    <div id="user-content">
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="card-title text-center">실시간 심근경색 위험도</h2>
+        <p class="card-subtitle text-center">Multimodal MCP 분석 기반</p>
+        
+        <div class="risk-gauge">
+          <div class="risk-gauge-bg"></div>
+          <div class="risk-gauge-fill" id="risk-gauge" style="border-color: #2c90e2; transform: rotate(36deg);"></div>
+          <div class="risk-gauge-indicator">
+            <p class="text-3xl font-bold text-[#0e151b]" id="risk-percentage">20%</p>
+            <p class="text-xs text-[#507695]" id="confidence-interval">신뢰 구간: 15-25% (±0.05)</p>
+          </div>
+        </div>
+        
+        <div class="flex justify-between px-4 mt-2">
+          <span class="text-xs text-green-500">안전</span>
+          <span class="text-xs text-yellow-500">주의</span>
+          <span class="text-xs text-red-500">위험</span>
+        </div>
+        
+        <!-- 위험 요인 표시 -->
+        <div class="mt-4">
+          <h3 class="text-sm font-bold text-[#0e151b] mb-2">주요 위험 요인</h3>
+          <div class="flex flex-wrap gap-2" id="risk-factors">
+            <span class="badge badge-blue">심박수 변화</span>
+            <span class="badge badge-yellow">수면 질 저하</span>
+          </div>
+        </div>
+
+        <!-- 모델 정보 -->
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          <div class="flex justify-between text-xs text-[#507695]">
+            <span>모델 정확도: 97.5%</span>
+            <span>마지막 분석: 2분 전</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 멀티모달 분석 카드 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="card-title">멀티모달 데이터 분석</h2>
+        <p class="card-subtitle">다중 생체 신호 실시간 처리</p>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <!-- ECG 데이터 -->
+          <div class="bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="text-xs font-bold text-[#0e151b]">ECG</h3>
+              <span class="badge badge-green">정상</span>
+            </div>
+            <div class="h-12 w-full overflow-hidden relative">
+              <svg width="100%" height="100%" viewBox="0 0 200 50" preserveAspectRatio="none">
+                <polyline 
+                  class="ecg-line"
+                  points="0,25 10,25 15,25 20,23 25,25 30,50 35,0 40,25 45,25 50,25 55,25 60,23 65,25 70,27 75,25 80,25 85,25 90,25 95,23 100,25 105,50 110,0 115,25 120,25 125,25 130,25 135,23 140,25 145,25 150,25 155,25 160,23 165,25 170,50 175,0 180,25 185,25 190,25 195,25 200,25"
+                  fill="none" 
+                  stroke="#2c90e2" 
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+          
+          <!-- 산소포화도 -->
+          <div class="bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="text-xs font-bold text-[#0e151b]">산소포화도</h3>
+              <span class="badge badge-green">98%</span>
+            </div>
+            <div class="flex items-end h-12">
+              <div class="flex-1 bg-blue-100 rounded-t-md h-10"></div>
+              <div class="flex-1 bg-blue-300 rounded-t-md h-8"></div>
+              <div class="flex-1 bg-blue-400 rounded-t-md h-11"></div>
+              <div class="flex-1 bg-blue-500 rounded-t-md h-9"></div>
+              <div class="flex-1 bg-blue-600 rounded-t-md h-12"></div>
+            </div>
+          </div>
+          
+          <!-- 심박변이도 -->
+          <div class="bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="text-xs font-bold text-[#0e151b]">심박변이도</h3>
+              <span class="badge badge-yellow">주의</span>
+            </div>
+            <div class="flex justify-between text-[#507695] text-xs">
+              <span>SDNN: 32ms</span>
+              <span>RMSSD: 22ms</span>
+            </div>
+          </div>
+          
+          <!-- 수면 데이터 -->
+          <div class="bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="text-xs font-bold text-[#0e151b]">수면</h3>
+              <span class="badge badge-yellow">6.2시간</span>
+            </div>
+            <div class="text-[#507695] text-xs">
+              <div class="flex justify-between">
+                <span>수면 질:</span>
+                <span>보통 (65%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 상황 인식 및 MCP 설정 카드 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="card-title">상황 인식 및 불확실성 정량화</h2>
+        <p class="card-subtitle">Monte Carlo 예측을 통한 신뢰성 높은 분석</p>
+        
+        <!-- 상황 인식 설정 -->
+        <div class="mb-4">
+          <h3 class="text-sm font-bold text-[#0e151b] mb-2">현재 활동 상태</h3>
+          <div class="flex overflow-x-auto pb-2 gap-2">
+            <button class="badge badge-blue whitespace-nowrap">수면 중</button>
+            <button class="badge badge-blue whitespace-nowrap bg-[#2c90e2] text-white">휴식 중</button>
+            <button class="badge badge-blue whitespace-nowrap">가벼운 활동</button>
+            <button class="badge badge-blue whitespace-nowrap">중간 활동</button>
+            <button class="badge badge-blue whitespace-nowrap">격렬한 활동</button>
+          </div>
+        </div>
+        
+        <!-- MCP 설정 -->
+        <div>
+          <h3 class="text-sm font-bold text-[#0e151b] mb-2">MCP 설정</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs text-[#507695]">시뮬레이션 횟수</label>
+              <select class="w-full bg-[#f8fafb] rounded-lg p-2 text-sm mt-1">
+                <option value="50">50회</option>
+                <option value="100" selected>100회</option>
+                <option value="200">200회</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-[#507695]">드롭아웃 비율</label>
+              <select class="w-full bg-[#f8fafb] rounded-lg p-2 text-sm mt-1">
+                <option value="0.1">10%</option>
+                <option value="0.2" selected>20%</option>
+                <option value="0.3">30%</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 분석하기 버튼 -->
+      <button class="primary-button w-full mb-4">
+        실시간 분석 시작하기
+      </button>
+    </div>
+
+    <!-- 보호자 모드 화면 (기본적으로 숨겨져 있음) -->
+    <div id="guardian-content" class="hidden">
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="card-title">대상자 건강 상태</h2>
+        <p class="card-subtitle">실시간 심근경색 위험도 모니터링</p>
+        
+        <div class="space-y-3">
+          <!-- 사용자 1 -->
+          <div class="flex justify-between items-center bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                <span class="text-green-500 text-sm">안전</span>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-[#0e151b]">김철수</p>
+                <p class="text-xs text-[#507695]">마지막 업데이트: 2분 전</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-[#0e151b]">15%</p>
+              <p class="text-xs text-[#507695]">±5%</p>
+            </div>
+          </div>
+          
+          <!-- 사용자 2 -->
+          <div class="flex justify-between items-center bg-[#f8fafb] p-3 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
+                <span class="text-yellow-500 text-sm">주의</span>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-[#0e151b]">박지민</p>
+                <p class="text-xs text-[#507695]">마지막 업데이트: 10분 전</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-[#0e151b]">45%</p>
+              <p class="text-xs text-[#507695]">±8%</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 알림 설정 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="card-title">알림 설정</h2>
+        <p class="card-subtitle">중요 상황 발생 시 알림 받기</p>
+        
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">응급 상황 알림</p>
+              <p class="text-xs text-[#507695]">위험도 70% 이상</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">경고 상황 알림</p>
+              <p class="text-xs text-[#507695]">위험도 50% 이상</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-[#0e151b]">일일 리포트</p>
+              <p class="text-xs text-[#507695]">24시간 요약 보고서</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2c90e2]"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 위치 공유 설정 -->
+      <div class="card-with-shadow p-5 mb-4">
+        <h2 class="card-title">위치 공유 설정</h2>
+        <p class="card-subtitle">응급 상황 시 위치 정보 공유</p>
+        
+        <div class="mb-4">
+          <label class="flex items-center space-x-2">
+            <input type="checkbox" checked class="rounded text-[#2c90e2] focus:ring-[#2c90e2]">
+            <span class="text-sm">응급 상황 시 자동 위치 공유</span>
+          </label>
+        </div>
+        
+        <div class="bg-[#f8fafb] p-3 rounded-xl text-center">
+          <p class="text-sm text-[#507695]">응급 상황 발생 시 AML/ELS 지원을 통해 119로 자동 위치 전송</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="js/health_risk_calculator.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 사용자/보호자 모드 전환
+      const userModeInputs = document.querySelectorAll('input[name="user-mode"]');
+      const userContent = document.getElementById('user-content');
+      const guardianContent = document.getElementById('guardian-content');
+      
+      userModeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+          if (this.value === 'user') {
+            userContent.classList.remove('hidden');
+            guardianContent.classList.add('hidden');
+          } else {
+            userContent.classList.add('hidden');
+            guardianContent.classList.remove('hidden');
+          }
+        });
+      });
+      
+      // 위험도 게이지 설정
+      function updateRiskGauge(riskPercentage, confidenceInterval) {
+        const riskGauge = document.getElementById('risk-gauge');
+        const riskPercentageElement = document.getElementById('risk-percentage');
+        const confidenceIntervalElement = document.getElementById('confidence-interval');
+        
+        // 180도가 게이지의 최대값 (100%)
+        const degrees = (riskPercentage / 100) * 180;
+        
+        // 위험도에 따른 색상 설정
+        let color;
+        if (riskPercentage >= 70) {
+          color = '#ef4444'; // 빨간색 (위험)
+        } else if (riskPercentage >= 50) {
+          color = '#f59e0b'; // 노란색 (주의)
+        } else if (riskPercentage >= 30) {
+          color = '#ebb305'; // 연한 노란색 (경계)
+        } else {
+          color = '#10b981'; // 녹색 (안전)
+        }
+        
+        riskGauge.style.transform = `rotate(${degrees}deg)`;
+        riskGauge.style.borderColor = color;
+        riskPercentageElement.textContent = `${riskPercentage}%`;
+        riskPercentageElement.style.color = color;
+        
+        if (confidenceInterval) {
+          const lower = confidenceInterval.lower * 100;
+          const upper = confidenceInterval.upper * 100;
+          const uncertainty = (confidenceInterval.upper - confidenceInterval.lower) / 2;
+          confidenceIntervalElement.textContent = `신뢰 구간: ${lower.toFixed(1)}-${upper.toFixed(1)}% (±${uncertainty.toFixed(3)})`;
+        }
+      }
+      
+      // 위험 요인 업데이트 함수
+      function updateRiskFactors(factors) {
+        const riskFactorsContainer = document.getElementById('risk-factors');
+        riskFactorsContainer.innerHTML = '';
+        
+        factors.forEach(factor => {
+          const badge = document.createElement('span');
+          badge.className = 'badge badge-blue';
+          badge.textContent = factor;
+          riskFactorsContainer.appendChild(badge);
+        });
+      }
+      
+      // 테스트 데이터로 초기화
+      updateRiskGauge(45, {lower: 0.4, upper: 0.5});
+      updateRiskFactors(['심박수 변화', '수면 질 저하', 'ST 분절 하강']);
+      
+      // 건강 위험도 계산기 인스턴스가 있으면 연결
+      if (window.healthRiskCalculator) {
+        // 시뮬레이션 데이터로 초기화
+        const userData = {
+          age: 65,
+          gender: 'male',
+          medicalHistory: ['hypertension', 'diabetes']
+        };
+        
+        const sensorData = {
+          heartRate: 85,
+          spo2: 96,
+          hrv: {
+            sdnn: 32,
+            rmssd: 22
+          },
+          ecgAnalysis: {
+            stDepression: true,
+            irregularRhythm: false
+          },
+          sleepData: {
+            hours: 6.2,
+            poorQuality: true
+          },
+          activityData: {
+            sedentary: true,
+            dailySteps: 2500
+          },
+          stressLevel: 7
+        };
+        
+        const contextData = {
+          activity: 'resting'
+        };
+        
+        // 실시간 분석 실행
+        const result = window.healthRiskCalculator.calculateRealtimeRisk(userData, sensorData, contextData);
+        
+        // UI 업데이트
+        updateRiskGauge(parseFloat(result.riskPercentage), result.confidenceInterval);
+        updateRiskFactors(result.contributingFactors);
+      }
+    });
+  </script>
+</body>
+</html> 

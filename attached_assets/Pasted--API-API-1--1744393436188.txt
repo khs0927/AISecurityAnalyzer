@@ -1,0 +1,64 @@
+앱 개발에서 내 주변 병원을 표시하는 용도로 사용할 수 있는 API는 다음과 같습니다:
+
+### **추천 API**
+1. **국립중앙의료원 전국 병·의원 찾기 서비스 (공공데이터포털)**
+   - 제공기관: 국립중앙의료원
+   - API 유형: REST
+   - 데이터 포맷: XML
+   - 특징:
+     - 전국 병·의원 정보를 조회할 수 있음.
+     - 무료로 사용 가능하며, 개발 계정 기준으로 높은 트래픽을 지원(1,000,000 요청).
+     - 병원 위치 정보를 기반으로 검색 가능[3][4].
+
+2. **Kakao Map API**
+   - 제공기관: Kakao
+   - 주요 기능:
+     - 지도 생성 및 현재 위치를 기반으로 장소 검색.
+     - `GeoLocation API`를 활용하여 현재 위치를 얻고, 주변 병원을 검색 가능.
+     - 클러스터와 마커를 사용하여 병원 데이터를 지도에 표시[2][5].
+
+3. **Google Maps API**
+   - 필요한 API: Place API 및 Geocoding API
+   - 주요 기능:
+     - 내 주변 장소 검색 및 위치 지정.
+     - 병원 정보를 검색하고 경로 안내 기능 추가 가능.
+     - Google Cloud에서 활성화 후 사용[7].
+
+### **비교**
+| **API**               | **주요 기능**                                      | **비용**       | **적합성**                     |
+|------------------------|---------------------------------------------------|----------------|---------------------------------|
+| 국립중앙의료원 API    | 전국 병·의원 정보 제공                             | 무료           | 공공 데이터 활용에 적합        |
+| Kakao Map API         | 지도 생성, 현재 위치 기반 검색                     | 무료           | 한국 내 서비스에 적합          |
+| Google Maps API       | 장소 검색, 경로 안내                               | 유료 (일부 무료)| 글로벌 서비스에 적합           |
+
+### **추천 순위**
+- 한국 내 앱 개발이라면 **국립중앙의료원 API**와 **Kakao Map API**가 가장 적합합니다.
+- 글로벌 확장성을 고려한다면 **Google Maps API**를 선택하세요.
+
+필요한 데이터와 기능에 따라 위 API 중 하나를 선택해 구현하면 됩니다.
+
+Citations:
+[1] https://www.data.go.kr/tcs/dss/selectDataSetList.do?dType=API&operator=AND&detailKeyword=&publicDataPk=&recmSe=N&detailText=&relatedKeyword=&commaNotInData=&commaAndData=&commaOrData=&must_not=&tabId=&dataSetCoreTf=&coreDataNm=&s
+[2] https://devjun.tistory.com/436
+[3] https://www.data.go.kr/data/15000736/openapi.do
+[4] https://github.com/applusform/nearHospital
+[5] https://day4fternoon.tistory.com/125
+[6] https://boostbrothers.github.io/technology/2019/10/04/%EB%A0%88%EB%94%94%EC%8A%A4%EB%A5%BC-%ED%99%9C%EC%9A%A9%ED%95%9C-%EB%B3%91%EC%9B%90-%EC%B0%BE%EA%B8%B0-%EC%84%9C%EB%B9%84%EC%8A%A4-API-%EA%B0%9C%EB%B0%9C/
+[7] https://www.toolify.ai/ko/ai-news-kr/google-maps-api-735543
+[8] https://untitledtblog.tistory.com/28
+[9] https://www.2e.co.kr/news/articleView.html?idxno=301793
+[10] https://mekain80.tistory.com/201
+[11] https://www.youtube.com/watch?v=Tp8OzXHpvF8
+[12] https://github.com/applusform/NearHospitalMap
+[13] https://www.khug.or.kr/openapi/web/ap/in/apin000003.jsp?mode=S&articleId=20208&currentPage=1&title=%28%EF%BF%BD%DF%BF%EF%BF%BD%EF%BF%BD%CE%B8%EF%BF%BD%EF%BF%BD%EF%BF%BD%EF%BF%BD+%EF%BF%BD%EF%BF%BD%EF%BF%BD%C2%B4%DA%A1%EF%BF%BD+%EF%BF%BD%CF%B3%EF%BF%BD%EF%BF%BD%EF%BF%BD+%EF%BF%BD%EF%BF%BD%EF%BF%BD%C4%B5%EF%BF%BD+%EF%BF%BD%EF%BF%BD%EF%BF%BD%EF%BF%BD+%EF%BF%BD%EF%BF%BD%21%29
+[14] https://velog.io/@hyeonbinnn/React-%EC%B9%B4%EC%B9%B4%EC%98%A4%EB%A7%B5-API%EB%A1%9C-%ED%8E%AB-%EC%A7%80%EB%8F%84-%EA%B8%B0%EB%8A%A5-%EA%B5%AC%ED%98%84-3
+[15] https://safemap.go.kr/opna/data/dataView.do?objtId=128
+[16] https://mokeya2.tistory.com/entry/%ED%97%AC%EC%8A%A4%EC%BC%80%EC%96%B4-%EC%9B%B9%EC%95%B1-%EC%84%9C%EB%B9%84%EC%8A%A4-%EA%B0%9C%EB%B0%9C-%EC%8B%9C-%ED%99%9C%EC%9A%A9%ED%95%A0-%EC%88%98-%EC%9E%88%EB%8A%94-%EC%98%A4%ED%94%84%EC%86%8C%EC%8A%A4-API%EC%99%80-DB-%EB%AA%A9%EB%A1%9D
+[17] https://www.data.go.kr/data/15001698/openapi.do
+[18] https://safemap.go.kr/opna/data/dataView.do?objtId=129
+[19] https://www.data.go.kr/tcs/puc/selectPublicUseCaseView.do?pageIndex=1&prcuseCaseSn=1032793&hbrdSe=&searchCondition1=&searchCondition2=&cndCtgryEdu=&cndCtgryMngtTrt=&cndCtgryPblAdmin=&cndCtgryFnc=&cndCtgryEmplIndst=&cndCtgrySocWlf=&cndCtgryFdHlth=&cndCtgryCulTour=&cndCtgryHlthCare=&cndCtgryDisSfty=&cndCtgryTrnsLgc=&cndCtgryEnvWthr=&cndCtgrySncTech=&cndCtgryAgriFish=&cndCtgryUnfc=&cndCtgryLaw=&bindCndCtgry=&sort-post=SJCN&searchKeyword1=&bg_radio_off_on=on
+[20] https://ksiim.org/api/society/journal/download/272/27-32%EC%95%88%EB%B3%91%EC%9A%B1.pdf
+[21] https://blog.naver.com/vulnorang/222103929747
+
+---
+Perplexity로부터의 답변: pplx.ai/share

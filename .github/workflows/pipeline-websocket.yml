@@ -1,0 +1,672 @@
+name: "③ WebSocket 위험도 탭 구현"
+
+on:
+  repository_dispatch:
+    types: [trigger-pipeline-websocket]
+  workflow_dispatch:
+    inputs:
+      auto_merge:
+        description: '자동으로 main에 머지하기'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  NODE_VERSION: 18
+  BRANCH_NAME: feature/websocket-risk
+
+jobs:
+  implement-websocket-risk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Create feature branch
+        run: |
+          git checkout -b ${{ env.BRANCH_NAME }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm ci
+      
+      - name: Implement Server WebSocket
+        run: |
+          # 1. 서버 WebSocket 구현
+          mkdir -p server/src/websocket
+          
+          cat > server/src/websocket/index.ts << 'EOF'
+          import { Server as HttpServer } from 'http';
+          import { WebSocketServer } from 'ws';
+          import { EventEmitter } from 'events';
+          
+          // 메시지 타입 정의
+          export interface HealthEvent {
+            type: 'health_update' | 'risk_alert' | 'emergency';
+            userId: number;
+            timestamp: string;
+            data: any;
+          }
+          
+          // 글로벌 이벤트 버스
+          export const healthEventBus = new EventEmitter();
+          
+          export function setupWebSocketServer(server: HttpServer) {
+            const wss = new WebSocketServer({ server });
+            
+            wss.on('connection', (socket) => {
+              console.log('WebSocket 클라이언트 연결됨');
+              
+              // 인증 로직 구현 (필요 시)
+              let userId: number | null = null;
+              
+              socket.on('message', (message) => {
+                try {
+                  const data = JSON.parse(message.toString());
+                  
+                  // 클라이언트 인증 메시지 처리
+                  if (data.type === 'auth' && data.userId) {
+                    userId = data.userId;
+                    console.log(`클라이언트 인증 완료: 사용자 ID ${userId}`);
+                    
+                    // 인증 성공 응답
+                    socket.send(JSON.stringify({
+                      type: 'auth_success',
+                      userId,
+                      timestamp: new Date().toISOString()
+                    }));
+                    
+                    // 최근 데이터 전송 (실제 구현 시 DB에서 조회)
+                    socket.send(JSON.stringify({
+                      type: 'health_update',
+                      userId,
+                      timestamp: new Date().toISOString(),
+                      data: {
+                        heartRate: 72,
+                        oxygenLevel: 98,
+                        bloodPressure: { systolic: 120, diastolic: 80 },
+                        riskLevel: 15
+                      }
+                    }));
+                  }
+                  
+                  // 다른 메시지 타입 처리
+                  // TODO: 추가 메시지 타입 구현
+                } catch (err) {
+                  console.error('WebSocket 메시지 처리 오류:', err);
+                }
+              });
+              
+              // 연결 해제 처리
+              socket.on('close', () => {
+                console.log(`WebSocket 클라이언트 연결 해제: 사용자 ID ${userId || '인증 안됨'}`);
+              });
+              
+              // 오류 처리
+              socket.on('error', (err) => {
+                console.error('WebSocket 오류:', err);
+              });
+            });
+            
+            // 건강 이벤트 구독 및 브로드캐스트
+            healthEventBus.on('health_event', (event: HealthEvent) => {
+              // 연결된 모든 클라이언트에게 메시지 전송
+              wss.clients.forEach((client) => {
+                if (client.readyState === 1) { // OPEN
+                  client.send(JSON.stringify(event));
+                }
+              });
+            });
+            
+            // 위험도 계산 예제 (실제 구현 시 별도 모듈로 분리)
+            setInterval(() => {
+              // 데모 데이터: 실제로는 DB에서 최신 데이터를 가져와 계산
+              const demoUserId = 1;
+              const heartRate = Math.floor(Math.random() * 30) + 60; // 60-90
+              const oxygenLevel = Math.floor(Math.random() * 6) + 95; // 95-100
+              
+              // 간단한 위험도 계산 로직
+              let riskLevel = 0;
+              
+              if (heartRate > 100) riskLevel += 20;
+              else if (heartRate > 90) riskLevel += 10;
+              
+              if (oxygenLevel < 95) riskLevel += 30;
+              else if (oxygenLevel < 97) riskLevel += 15;
+              
+              // 무작위 이벤트 추가 (데모용)
+              if (Math.random() < 0.05) riskLevel += 25; // 5% 확률로 위험 상황 발생
+              
+              // 건강 이벤트 발생
+              const event: HealthEvent = {
+                type: riskLevel > 50 ? 'emergency' : riskLevel > 30 ? 'risk_alert' : 'health_update',
+                userId: demoUserId,
+                timestamp: new Date().toISOString(),
+                data: {
+                  heartRate,
+                  oxygenLevel,
+                  bloodPressure: { 
+                    systolic: 110 + Math.floor(Math.random() * 30),
+                    diastolic: 70 + Math.floor(Math.random() * 20)
+                  },
+                  riskLevel
+                }
+              };
+              
+              healthEventBus.emit('health_event', event);
+            }, 5000); // 5초마다 갱신
+            
+            return wss;
+          }
+          EOF
+          
+          # 2. 서버 메인 파일에 WebSocket 추가
+          cat > server/src/server.ts << 'EOF'
+          import express from 'express';
+          import http from 'http';
+          import cors from 'cors';
+          import morgan from 'morgan';
+          import { setupWebSocketServer } from './websocket';
+          
+          // 환경 변수 설정
+          const PORT = process.env.PORT || 3000;
+          
+          // Express 앱 생성
+          const app = express();
+          
+          // 미들웨어 설정
+          app.use(cors());
+          app.use(express.json());
+          app.use(morgan('dev'));
+          
+          // HTTP 서버 생성
+          const server = http.createServer(app);
+          
+          // WebSocket 서버 설정
+          setupWebSocketServer(server);
+          
+          // API 라우트
+          app.get('/api/health', (req, res) => {
+            res.json({ status: 'ok', message: '서버가 정상적으로 실행 중입니다.' });
+          });
+          
+          // 건강 데이터 API 예제
+          app.get('/api/health-data/latest', (req, res) => {
+            // 데모 데이터
+            const heartRate = Math.floor(Math.random() * 30) + 60; // 60-90
+            const oxygenLevel = Math.floor(Math.random() * 6) + 95; // 95-100
+            
+            // 위험도 계산
+            let riskLevel = 0;
+            if (heartRate > 100) riskLevel += 20;
+            else if (heartRate > 90) riskLevel += 10;
+            
+            if (oxygenLevel < 95) riskLevel += 30;
+            else if (oxygenLevel < 97) riskLevel += 15;
+            
+            // 무작위 이벤트 추가 (데모용)
+            if (Math.random() < 0.05) riskLevel += 25;
+            
+            // 이전 데이터 생성 (데모용)
+            const now = new Date();
+            const history = Array.from({ length: 24 }, (_, i) => {
+              const timePoint = new Date(now);
+              timePoint.setHours(now.getHours() - 24 + i);
+              
+              return {
+                timestamp: timePoint.toISOString(),
+                value: Math.floor(Math.random() * 20) + (i % 2 === 0 ? 70 : 65) // 변동 추가
+              };
+            });
+            
+            // 응답 데이터
+            res.json({
+              heartRate: { 
+                current: heartRate, 
+                min: 60, 
+                max: 100, 
+                history: history 
+              },
+              oxygenLevel: { 
+                current: oxygenLevel, 
+                min: 95, 
+                max: 100, 
+                history: history.map(item => ({ 
+                  ...item, 
+                  value: Math.floor(Math.random() * 3) + 97
+                }))
+              },
+              bloodPressure: { 
+                systolic: 110 + Math.floor(Math.random() * 30),
+                diastolic: 70 + Math.floor(Math.random() * 20),
+                history: history.map(item => ({
+                  ...item, 
+                  systolic: 110 + Math.floor(Math.random() * 30),
+                  diastolic: 70 + Math.floor(Math.random() * 20)
+                }))
+              },
+              riskLevel: { 
+                current: riskLevel, 
+                history: history.map(item => ({
+                  ...item, 
+                  value: Math.floor(Math.random() * 20) + (i % 5 === 0 ? 30 : 10)
+                }))
+              }
+            });
+          });
+          
+          // 서버 시작
+          server.listen(PORT, () => {
+            console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+          });
+          
+          export default server;
+          EOF
+      
+      - name: Implement Client WebSocket
+        run: |
+          # 1. 클라이언트 WebSocket 훅 생성
+          mkdir -p client/src/hooks
+          
+          cat > client/src/hooks/useWebSocket.ts << 'EOF'
+          import { useEffect, useState, useRef, useCallback } from 'react';
+          
+          interface WebSocketOptions {
+            url: string;
+            onMessage?: (event: MessageEvent) => void;
+            onOpen?: (event: Event) => void;
+            onClose?: (event: CloseEvent) => void;
+            onError?: (event: Event) => void;
+            autoReconnect?: boolean;
+            reconnectInterval?: number;
+            maxReconnectAttempts?: number;
+          }
+          
+          interface WebSocketHook {
+            sendMessage: (data: any) => void;
+            lastMessage: any;
+            readyState: number;
+            connectionStatus: 'connecting' | 'open' | 'closing' | 'closed' | 'reconnecting';
+          }
+          
+          const useWebSocket = (options: WebSocketOptions): WebSocketHook => {
+            const {
+              url,
+              onMessage,
+              onOpen,
+              onClose,
+              onError,
+              autoReconnect = true,
+              reconnectInterval = 5000,
+              maxReconnectAttempts = 5
+            } = options;
+            
+            const [lastMessage, setLastMessage] = useState<any>(null);
+            const [readyState, setReadyState] = useState<number>(WebSocket.CONNECTING);
+            const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'open' | 'closing' | 'closed' | 'reconnecting'>('connecting');
+            
+            const socketRef = useRef<WebSocket | null>(null);
+            const reconnectAttemptsRef = useRef(0);
+            const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+            
+            const connect = useCallback(() => {
+              try {
+                const ws = new WebSocket(url);
+                socketRef.current = ws;
+                setConnectionStatus('connecting');
+                
+                ws.onopen = (event) => {
+                  setReadyState(WebSocket.OPEN);
+                  setConnectionStatus('open');
+                  reconnectAttemptsRef.current = 0;
+                  if (onOpen) onOpen(event);
+                };
+                
+                ws.onmessage = (event) => {
+                  try {
+                    const data = JSON.parse(event.data);
+                    setLastMessage(data);
+                    if (onMessage) onMessage(event);
+                  } catch (err) {
+                    console.error('WebSocket 메시지 파싱 오류:', err);
+                    setLastMessage(event.data);
+                    if (onMessage) onMessage(event);
+                  }
+                };
+                
+                ws.onclose = (event) => {
+                  setReadyState(WebSocket.CLOSED);
+                  setConnectionStatus('closed');
+                  if (onClose) onClose(event);
+                  
+                  if (autoReconnect && reconnectAttemptsRef.current < maxReconnectAttempts) {
+                    setConnectionStatus('reconnecting');
+                    reconnectAttemptsRef.current += 1;
+                    reconnectTimeoutRef.current = setTimeout(() => {
+                      connect();
+                    }, reconnectInterval);
+                  }
+                };
+                
+                ws.onerror = (event) => {
+                  setConnectionStatus('closed');
+                  if (onError) onError(event);
+                };
+              } catch (error) {
+                console.error('WebSocket 연결 오류:', error);
+                setConnectionStatus('closed');
+              }
+            }, [url, onMessage, onOpen, onClose, onError, autoReconnect, reconnectInterval, maxReconnectAttempts]);
+            
+            const sendMessage = useCallback((data: any) => {
+              if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+                socketRef.current.send(typeof data === 'string' ? data : JSON.stringify(data));
+              } else {
+                console.warn('WebSocket이 열려 있지 않아 메시지를 보낼 수 없습니다.');
+              }
+            }, []);
+            
+            useEffect(() => {
+              connect();
+              
+              return () => {
+                if (reconnectTimeoutRef.current) {
+                  clearTimeout(reconnectTimeoutRef.current);
+                }
+                
+                if (socketRef.current) {
+                  socketRef.current.onopen = null;
+                  socketRef.current.onmessage = null;
+                  socketRef.current.onclose = null;
+                  socketRef.current.onerror = null;
+                  
+                  if (socketRef.current.readyState === WebSocket.OPEN) {
+                    socketRef.current.close();
+                  }
+                }
+              };
+            }, [connect]);
+            
+            return {
+              sendMessage,
+              lastMessage,
+              readyState,
+              connectionStatus,
+            };
+          };
+          
+          export default useWebSocket;
+          EOF
+          
+          # 2. 위험도 탭 컴포넌트 생성
+          mkdir -p client/src/components/risk
+          
+          cat > client/src/components/risk/RiskDashboard.tsx << 'EOF'
+          import React, { useState, useEffect } from 'react';
+          import useWebSocket from '../../hooks/useWebSocket';
+          import { LineChart } from '../charts';
+          import { StatusIndicator } from '../common';
+          
+          // WebSocket 서버 URL
+          const WS_URL = process.env.VITE_WS_URL || 'ws://localhost:3000';
+          
+          const RiskDashboard: React.FC = () => {
+            const [userId, setUserId] = useState<number>(1); // 데모용 사용자 ID
+            const [healthData, setHealthData] = useState({
+              heartRate: 72,
+              oxygenLevel: 98,
+              bloodPressure: { systolic: 120, diastolic: 80 },
+              riskLevel: 15,
+              timestamp: new Date().toISOString()
+            });
+            
+            const [riskHistory, setRiskHistory] = useState<{ timestamp: string; value: number }[]>([]);
+            const [alerts, setAlerts] = useState<{ message: string; level: string; timestamp: string }[]>([]);
+            
+            // WebSocket 연결
+            const { lastMessage, sendMessage, connectionStatus } = useWebSocket({
+              url: `${WS_URL}`,
+              onOpen: () => {
+                console.log('WebSocket 연결됨');
+                // 인증 메시지 전송
+                sendMessage({ type: 'auth', userId });
+              }
+            });
+            
+            // 메시지 처리
+            useEffect(() => {
+              if (lastMessage) {
+                console.log('받은 메시지:', lastMessage);
+                
+                switch (lastMessage.type) {
+                  case 'health_update':
+                    setHealthData(lastMessage.data);
+                    
+                    // 위험도 기록 업데이트
+                    setRiskHistory(prev => {
+                      const newHistory = [...prev, { 
+                        timestamp: lastMessage.timestamp, 
+                        value: lastMessage.data.riskLevel 
+                      }];
+                      
+                      // 최근 50개 항목만 유지
+                      return newHistory.slice(-50);
+                    });
+                    break;
+                    
+                  case 'risk_alert':
+                    setHealthData(lastMessage.data);
+                    
+                    // 위험도 기록 업데이트
+                    setRiskHistory(prev => {
+                      const newHistory = [...prev, { 
+                        timestamp: lastMessage.timestamp, 
+                        value: lastMessage.data.riskLevel 
+                      }];
+                      
+                      return newHistory.slice(-50);
+                    });
+                    
+                    // 경고 추가
+                    setAlerts(prev => {
+                      const newAlerts = [...prev, { 
+                        message: `위험 상황 감지: 위험도 ${lastMessage.data.riskLevel}%`, 
+                        level: 'warning',
+                        timestamp: lastMessage.timestamp
+                      }];
+                      
+                      return newAlerts.slice(-10); // 최근 10개 알림 유지
+                    });
+                    break;
+                    
+                  case 'emergency':
+                    setHealthData(lastMessage.data);
+                    
+                    // 위험도 기록 업데이트
+                    setRiskHistory(prev => {
+                      const newHistory = [...prev, { 
+                        timestamp: lastMessage.timestamp, 
+                        value: lastMessage.data.riskLevel 
+                      }];
+                      
+                      return newHistory.slice(-50);
+                    });
+                    
+                    // 응급 상황 경고 추가
+                    setAlerts(prev => {
+                      const newAlerts = [...prev, { 
+                        message: `응급 상황 발생: 위험도 ${lastMessage.data.riskLevel}%`, 
+                        level: 'danger',
+                        timestamp: lastMessage.timestamp
+                      }];
+                      
+                      return newAlerts.slice(-10);
+                    });
+                    break;
+                    
+                  default:
+                    break;
+                }
+              }
+            }, [lastMessage]);
+            
+            return (
+              <div className="risk-dashboard">
+                <h2>실시간 위험도 모니터링</h2>
+                
+                {connectionStatus !== 'open' && (
+                  <div className={`connection-status ${connectionStatus}`}>
+                    <p>
+                      {connectionStatus === 'connecting' && '서버에 연결 중...'}
+                      {connectionStatus === 'reconnecting' && '재연결 시도 중...'}
+                      {(connectionStatus === 'closed' || connectionStatus === 'closing') && '서버 연결이 끊어졌습니다.'}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="risk-status">
+                  <StatusIndicator riskLevel={healthData.riskLevel} />
+                </div>
+                
+                <div className="risk-chart">
+                  <LineChart 
+                    title="위험도 추이" 
+                    data={riskHistory} 
+                    yAxisLabel="위험도 (%)"
+                    color="#ff6384"
+                  />
+                </div>
+                
+                <div className="vital-signs">
+                  <h3>실시간 생체 신호</h3>
+                  <div className="vital-grid">
+                    <div className="vital-item">
+                      <span className="label">심박수</span>
+                      <span className={`value ${healthData.heartRate > 100 ? 'warning' : ''}`}>
+                        {healthData.heartRate} BPM
+                      </span>
+                    </div>
+                    
+                    <div className="vital-item">
+                      <span className="label">산소포화도</span>
+                      <span className={`value ${healthData.oxygenLevel < 95 ? 'warning' : ''}`}>
+                        {healthData.oxygenLevel}%
+                      </span>
+                    </div>
+                    
+                    <div className="vital-item">
+                      <span className="label">혈압</span>
+                      <span className={`value ${healthData.bloodPressure.systolic > 140 ? 'warning' : ''}`}>
+                        {healthData.bloodPressure.systolic}/{healthData.bloodPressure.diastolic}
+                      </span>
+                    </div>
+                    
+                    <div className="vital-item">
+                      <span className="label">위험도</span>
+                      <span className={`value ${
+                        healthData.riskLevel > 50 ? 'danger' : 
+                        healthData.riskLevel > 30 ? 'warning' : ''}
+                      `}>
+                        {healthData.riskLevel}%
+                      </span>
+                    </div>
+                    
+                    <div className="vital-item full-width">
+                      <span className="label">마지막 업데이트</span>
+                      <span className="value">
+                        {new Date(healthData.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="alerts-panel">
+                  <h3>알림 목록</h3>
+                  {alerts.length === 0 ? (
+                    <p className="no-alerts">알림이 없습니다.</p>
+                  ) : (
+                    <ul className="alerts-list">
+                      {alerts.map((alert, index) => (
+                        <li key={index} className={`alert ${alert.level}`}>
+                          <div className="alert-icon">
+                            {alert.level === 'warning' && <i className="fas fa-exclamation-triangle"></i>}
+                            {alert.level === 'danger' && <i className="fas fa-exclamation-circle"></i>}
+                          </div>
+                          <div className="alert-content">
+                            <p className="alert-message">{alert.message}</p>
+                            <p className="alert-time">{new Date(alert.timestamp).toLocaleString()}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            );
+          };
+          
+          export default RiskDashboard;
+          EOF
+      
+      - name: Install dependencies
+        run: |
+          # WebSocket 서버 의존성 설치
+          cd server
+          npm install ws @types/ws
+          
+          # 돌아오기
+          cd ..
+      
+      - name: Commit changes
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git commit -m "⚡ Implement real-time risk monitoring with WebSockets" || echo "No changes to commit"
+      
+      - name: Push to feature branch
+        run: git push -f origin ${{ env.BRANCH_NAME }}
+      
+      - name: Create PR to main
+        id: create-pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.BRANCH_NAME }}
+          base: main
+          title: "⚡ WebSocket 실시간 위험도 모니터링 구현"
+          body: |
+            이 PR은 다음 기능을 추가합니다:
+            
+            - 서버 측 WebSocket 구현
+            - 실시간 건강 데이터 스트림 구현
+            - 위험도 계산 및 알림 시스템
+            - 클라이언트 WebSocket 훅 및 컴포넌트
+            
+            자동으로 생성된 PR입니다.
+          delete-branch: true
+          draft: false
+      
+      - name: Auto-merge PR if enabled
+        if: steps.create-pr.outputs.pull-request-operation == 'created' && (github.event.client_payload.auto_merge == true || github.event.inputs.auto_merge == 'true')
+        run: |
+          PR_NUMBER=$(echo '${{ steps.create-pr.outputs.pull-request-number }}')
+          gh pr merge ${PR_NUMBER} --merge --delete-branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Trigger next pipeline
+        if: success() && (github.event.client_payload.auto_merge == true || github.event.inputs.auto_merge == 'true')
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: trigger-pipeline-ai-risk
+          client-payload: '{"auto_merge": true}' 
