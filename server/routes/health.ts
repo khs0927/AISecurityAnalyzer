@@ -4,6 +4,8 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { HealthDataType } from '../health/healthData';
 import { monitoring } from '../utils/monitoring';
+import express from 'express';
+import { pusher, supabase } from '../index';
 
 const router = Router();
 
@@ -564,4 +566,435 @@ router.get('/statistics', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-export default router; 
+/**
+ * @swagger
+ * /health/heart-rate:
+ *   get:
+ *     summary: 심박수 데이터 조회
+ *     description: 사용자의 심박수 데이터를 기간별로 조회합니다
+ *     tags: [Health]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month]
+ *         required: true
+ *         description: 조회 기간
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 기준 날짜 (기본값: 오늘)
+ *     responses:
+ *       200:
+ *         description: 심박수 데이터 조회 성공
+ *       401:
+ *         description: 인증되지 않음
+ */
+router.get('/heart-rate', async (req: Request, res: Response) => {
+  try {
+    const period = req.query.period as 'day' | 'week' | 'month' || 'day';
+    const date = req.query.date ? new Date(req.query.date as string) : new Date();
+    
+    // userId는 인증 시스템 구현 후 사용
+    // const userId = req.user?.id || 'anonymous';
+    
+    let labels: string[] = [];
+    let data: number[] = [];
+    let stats = { avg: 0, min: 0, max: 0 };
+    
+    // 기간별 데이터 생성
+    if (period === 'day') {
+      labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [62, 65, 68, 72, 75, 73, 70, 68];
+      stats = { avg: 69, min: 62, max: 75 };
+    } else if (period === 'week') {
+      labels = ['월', '화', '수', '목', '금', '토', '일'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [70, 68, 75, 72, 74, 69, 71];
+      stats = { avg: 71, min: 68, max: 75 };
+    } else if (period === 'month') {
+      labels = ['1주', '2주', '3주', '4주'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [72, 70, 73, 71];
+      stats = { avg: 72, min: 70, max: 73 };
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        labels,
+        datasets: [{ data }]
+      },
+      stats
+    });
+  } catch (error) {
+    monitoring.log('health', 'error', `심박수 데이터 조회 오류: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: '심박수 데이터 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /health/oxygen:
+ *   get:
+ *     summary: 산소포화도 데이터 조회
+ *     description: 사용자의 산소포화도 데이터를 기간별로 조회합니다
+ *     tags: [Health]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month]
+ *         required: true
+ *         description: 조회 기간
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 기준 날짜 (기본값: 오늘)
+ *     responses:
+ *       200:
+ *         description: 산소포화도 데이터 조회 성공
+ *       401:
+ *         description: 인증되지 않음
+ */
+router.get('/oxygen', async (req: Request, res: Response) => {
+  try {
+    const period = req.query.period as 'day' | 'week' | 'month' || 'day';
+    const date = req.query.date ? new Date(req.query.date as string) : new Date();
+    
+    // userId는 인증 시스템 구현 후 사용
+    // const userId = req.user?.id || 'anonymous';
+    
+    let labels: string[] = [];
+    let data: number[] = [];
+    let stats = { avg: 0, min: 0, max: 0 };
+    
+    // 기간별 데이터 생성
+    if (period === 'day') {
+      labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [96, 97, 98, 99, 98, 97, 98, 97];
+      stats = { avg: 98, min: 96, max: 99 };
+    } else if (period === 'week') {
+      labels = ['월', '화', '수', '목', '금', '토', '일'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [98, 97, 98, 98, 99, 97, 98];
+      stats = { avg: 98, min: 97, max: 99 };
+    } else if (period === 'month') {
+      labels = ['1주', '2주', '3주', '4주'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [98, 97, 98, 98];
+      stats = { avg: 98, min: 97, max: 98 };
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        labels,
+        datasets: [{ data }]
+      },
+      stats
+    });
+  } catch (error) {
+    monitoring.log('health', 'error', `산소포화도 데이터 조회 오류: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: '산소포화도 데이터 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /health/ecg:
+ *   get:
+ *     summary: ECG 데이터 조회
+ *     description: 사용자의 ECG 데이터를 기간별로 조회합니다
+ *     tags: [Health]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month]
+ *         required: true
+ *         description: 조회 기간
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 기준 날짜 (기본값: 오늘)
+ *     responses:
+ *       200:
+ *         description: ECG 데이터 조회 성공
+ *       401:
+ *         description: 인증되지 않음
+ */
+router.get('/ecg', async (req: Request, res: Response) => {
+  try {
+    const period = req.query.period as 'day' | 'week' | 'month' || 'day';
+    const date = req.query.date ? new Date(req.query.date as string) : new Date();
+    
+    // userId는 인증 시스템 구현 후 사용
+    // const userId = req.user?.id || 'anonymous';
+    
+    let labels: string[] = [];
+    let data: number[] = [];
+    let stats = { avg: 0, min: 0, max: 0 };
+    
+    // 기간별 데이터 생성
+    if (period === 'day') {
+      labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [0.5, 0.7, 0.9, 1.1, 0.8, 0.6, 0.7, 0.9];
+      stats = { avg: 0.8, min: 0.5, max: 1.1 };
+    } else if (period === 'week') {
+      labels = ['월', '화', '수', '목', '금', '토', '일'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [0.8, 0.9, 1.0, 0.7, 0.8, 0.9, 1.1];
+      stats = { avg: 0.9, min: 0.7, max: 1.1 };
+    } else if (period === 'month') {
+      labels = ['1주', '2주', '3주', '4주'];
+      // 실제 구현에서는 DB에서 데이터를 가져와야 함
+      data = [0.9, 0.8, 0.9, 0.8];
+      stats = { avg: 0.85, min: 0.8, max: 0.9 };
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        labels,
+        datasets: [{ data }]
+      },
+      stats
+    });
+  } catch (error) {
+    monitoring.log('health', 'error', `ECG 데이터 조회 오류: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'ECG 데이터 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+const expressRouter = express.Router();
+
+// 건강 데이터 타입 정의
+interface HealthData {
+  userId: string;
+  timestamp: number;
+  heartRate: number;
+  oxygenLevel: number;
+  ecgData: number[];
+}
+
+interface HistoricalData {
+  daily: HealthData[];
+  weekly: HealthData[];
+  monthly: HealthData[];
+}
+
+interface RiskData {
+  userId: string;
+  timestamp: number;
+  risk: 'low' | 'medium' | 'high';
+  message: string;
+}
+
+// 현재 건강 데이터 가져오기
+expressRouter.get('/current/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const { data, error } = await supabase
+      .from('health_data')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false })
+      .limit(1);
+      
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      return res.status(404).json({ message: '데이터를 찾을 수 없습니다' });
+    }
+    
+    const healthData = {
+      userId: data[0].user_id,
+      timestamp: data[0].timestamp,
+      heartRate: data[0].heart_rate,
+      oxygenLevel: data[0].oxygen_level,
+      ecgData: data[0].ecg_data
+    };
+    
+    res.json(healthData);
+  } catch (err) {
+    console.error('건강 데이터 조회 오류:', err);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
+  }
+});
+
+// 기간별 건강 데이터 가져오기
+expressRouter.get('/historical/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const now = Date.now();
+  const dayAgo = now - 24 * 60 * 60 * 1000;
+  const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+  
+  try {
+    // 일별 데이터
+    const { data: dailyData, error: dailyError } = await supabase
+      .from('health_data')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('timestamp', dayAgo)
+      .order('timestamp', { ascending: true });
+      
+    if (dailyError) throw dailyError;
+    
+    // 주별 데이터
+    const { data: weeklyData, error: weeklyError } = await supabase
+      .from('health_data')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('timestamp', weekAgo)
+      .order('timestamp', { ascending: true });
+      
+    if (weeklyError) throw weeklyError;
+    
+    // 월별 데이터
+    const { data: monthlyData, error: monthlyError } = await supabase
+      .from('health_data')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('timestamp', monthAgo)
+      .order('timestamp', { ascending: true });
+      
+    if (monthlyError) throw monthlyError;
+    
+    // 결과 데이터 변환
+    const formatData = (data: any[]): HealthData[] => {
+      return data.map(item => ({
+        userId: item.user_id,
+        timestamp: item.timestamp,
+        heartRate: item.heart_rate,
+        oxygenLevel: item.oxygen_level,
+        ecgData: item.ecg_data || []
+      }));
+    };
+    
+    const historicalData: HistoricalData = {
+      daily: formatData(dailyData || []),
+      weekly: formatData(weeklyData || []),
+      monthly: formatData(monthlyData || [])
+    };
+    
+    res.json(historicalData);
+  } catch (err) {
+    console.error('기간별 건강 데이터 조회 오류:', err);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
+  }
+});
+
+// 건강 데이터 저장 및 실시간 업데이트
+expressRouter.post('/', async (req, res) => {
+  const healthData: HealthData = req.body;
+  
+  try {
+    // Supabase에 데이터 저장
+    const { error } = await supabase
+      .from('health_data')
+      .insert([{
+        user_id: healthData.userId,
+        timestamp: healthData.timestamp,
+        heart_rate: healthData.heartRate,
+        oxygen_level: healthData.oxygenLevel,
+        ecg_data: healthData.ecgData
+      }]);
+      
+    if (error) throw error;
+    
+    // Pusher를 통해 실시간 데이터 전송
+    await pusher.trigger(`user-${healthData.userId}`, 'new-data', healthData);
+    
+    res.status(201).json({ message: '데이터가 성공적으로 저장되었습니다' });
+  } catch (err) {
+    console.error('건강 데이터 저장 오류:', err);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
+  }
+});
+
+// 위험 상태 데이터 가져오기
+expressRouter.get('/risk/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const { data, error } = await supabase
+      .from('risk_data')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false })
+      .limit(5);
+      
+    if (error) throw error;
+    
+    const riskData: RiskData[] = (data || []).map(item => ({
+      userId: item.user_id,
+      timestamp: item.timestamp,
+      risk: item.risk,
+      message: item.message
+    }));
+    
+    res.json(riskData);
+  } catch (err) {
+    console.error('위험 상태 데이터 조회 오류:', err);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
+  }
+});
+
+// 위험 상태 알림 발송
+expressRouter.post('/risk', async (req, res) => {
+  const riskData: RiskData = req.body;
+  
+  try {
+    // Supabase에 위험 데이터 저장
+    const { error } = await supabase
+      .from('risk_data')
+      .insert([{
+        user_id: riskData.userId,
+        timestamp: riskData.timestamp,
+        risk: riskData.risk,
+        message: riskData.message
+      }]);
+      
+    if (error) throw error;
+    
+    // Pusher를 통해 위험 알림 전송
+    await pusher.trigger(`user-${riskData.userId}`, 'risk-alert', riskData);
+    
+    res.status(201).json({ message: '위험 알림이 발송되었습니다' });
+  } catch (err) {
+    console.error('위험 알림 발송 오류:', err);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
+  }
+});
+
+export default expressRouter; 

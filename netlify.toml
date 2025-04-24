@@ -1,0 +1,26 @@
+[build]
+  base = "client/"
+  publish = "dist/"
+  command = "pnpm build"
+
+[context.production.environment]
+  VITE_API_URL = "https://api.nottoday-medical.xyz"
+  VITE_PUSHER_APP_KEY = "pusher-app-key"
+  VITE_PUSHER_CLUSTER = "ap3"
+
+[context.staging.environment]
+  VITE_API_URL = "https://staging-api.nottoday-medical.xyz"
+  VITE_PUSHER_APP_KEY = "staging-pusher-app-key"
+  VITE_PUSHER_CLUSTER = "ap3"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' wss://*.pusherapp.com https://api.nottoday.app; img-src 'self' data:; style-src 'self' 'unsafe-inline';" 

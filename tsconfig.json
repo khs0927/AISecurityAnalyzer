@@ -1,31 +1,35 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*", "server/global.d.ts", "typings/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "include": [
+    "server/**/*.ts",
+    "client/src/**/*.ts",
+    "client/src/**/*.tsx",
+    "mobile/app/**/*.ts",
+    "mobile/app/**/*.tsx",
+    "shared/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "build"],
   "compilerOptions": {
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
-    "noEmit": true,
-    "module": "ESNext",
-    "strict": true,
-    "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "types": ["node"],
-    "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
-    },
     "target": "ES2020",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "typeRoots": ["./typings", "./server", "./server/types", "./node_modules/@types"],
-    "forceConsistentCasingInFileNames": true,
+    "module": "NodeNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
     "resolveJsonModule": true,
-    "downlevelIteration": true,
-    "noImplicitAny": false
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": false,
+    "types": ["node"],
+    "baseUrl": ".",
+    "rootDirs": [".", "server", "client", "mobile"],
+    "paths": {
+      "@/*": ["client/src/*"],
+      "@server/*": ["server/*"],
+      "@mobile/*": ["mobile/app/*"],
+      "@shared/*": ["shared/*"]
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import aiRouter from "./ai";
 import securityAnalysisRouter from "./security_analysis";
 import aiAnalysisRouter from "./ai_analysis";

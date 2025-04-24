@@ -1,49 +1,341 @@
-name: Deploy to Vercel
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'shared/**'
+      - 'docker-compose.yml'
   workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: '배포 환경'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
 
 jobs:
-  deploy:
+  security-check:
+    name: 보안 점검
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
+      - name: 코드 체크아웃
         uses: actions/checkout@v3
         
-      - name: Setup Node.js
+      - name: Node.js 설정
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
-          cache: 'npm'
+          node-version: '20'
           
-      - name: Install dependencies - Server
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+          
+      - name: pnpm 설치
+        run: pnpm install
+        
+      - name: 의존성 감사
+        id: audit
+        continue-on-error: true
         run: |
-          cd server
-          npm ci
+          pnpm audit
+          echo "pnpm_audit_exit_code=$?" >> $GITHUB_ENV
           
-      - name: Build server
+      - name: Python 의존성 감사
+        id: py_audit
+        continue-on-error: true
         run: |
-          cd server
-          npm run build
+          pip install safety
+          cd apps/agent
+          pip install poetry
+          poetry export -f requirements.txt | safety check
+          echo "py_audit_exit_code=$?" >> $GITHUB_ENV
           
-      - name: Install dependencies - Client
+      - name: 취약점 결과 확인
         run: |
-          cd client
-          npm ci
+          if [[ ${{ env.pnpm_audit_exit_code }} -ne 0 && ${{ env.py_audit_exit_code }} -ne 0 ]]; then
+            echo "중요 취약점이 발견되었습니다. GitHub Security 탭에서 확인하세요."
+          else
+            echo "중요한 취약점이 발견되지 않았습니다."
+          fi
           
-      - name: Build client
+      - name: CodeQL 분석
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript, typescript
+          
+      - name: CodeQL 분석 실행
+        uses: github/codeql-action/analyze@v2
+
+  prepare-models:
+    name: 모델 다운로드 및 준비
+    runs-on: ubuntu-latest
+    needs: security-check
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: 모델 캐시 확인
+        id: model-cache
+        uses: actions/cache@v3
+        with:
+          path: models
+          key: ${{ runner.os }}-models-${{ hashFiles('scripts/fetch_models.sh') }}
+          
+      - name: 모델 다운로드
+        if: steps.model-cache.outputs.cache-hit != 'true'
         run: |
-          cd client
-          npm run build
+          mkdir -p models
+          ./scripts/fetch_models.sh
           
-      - name: Deploy to Vercel
+      - name: 모델 압축
+        run: tar -czvf models.tar.gz models
+        
+      - name: 모델 아티팩트 업로드
+        uses: actions/upload-artifact@v3
+        with:
+          name: models
+          path: models.tar.gz
+          
+  build-api:
+    name: API 빌드
+    runs-on: ubuntu-latest
+    needs: security-check
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: Node.js 설정
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+          
+      - name: 의존성 설치
+        run: |
+          cd apps/api
+          pnpm install
+          
+      - name: API 빌드
+        run: |
+          cd apps/api
+          pnpm build
+          
+      - name: 빌드 결과 업로드
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-build
+          path: apps/api/dist
+          
+  build-web:
+    name: 웹 클라이언트 빌드
+    runs-on: ubuntu-latest
+    needs: security-check
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: Node.js 설정
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+          
+      - name: 의존성 설치
+        run: |
+          cd apps/web
+          pnpm install
+          
+      - name: 웹 빌드
+        run: |
+          cd apps/web
+          pnpm build
+          
+      - name: 빌드 결과 업로드
+        uses: actions/upload-artifact@v3
+        with:
+          name: web-build
+          path: apps/web/dist
+          
+  deploy:
+    name: 프로덕션 배포
+    runs-on: ubuntu-latest
+    needs: [prepare-models, build-api, build-web]
+    environment: production
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: 모델 다운로드
+        uses: actions/download-artifact@v3
+        with:
+          name: models
+          
+      - name: API 빌드 다운로드
+        uses: actions/download-artifact@v3
+        with:
+          name: api-build
+          path: apps/api/dist
+          
+      - name: 웹 빌드 다운로드
+        uses: actions/download-artifact@v3
+        with:
+          name: web-build
+          path: apps/web/dist
+          
+      - name: 모델 압축 해제
+        run: tar -xzvf models.tar.gz
+          
+      - name: 배포 환경 설정
+        run: |
+          echo "DEPLOY_TIME=$(date)" >> $GITHUB_ENV
+          echo "VERSION=${{ github.sha }}" >> $GITHUB_ENV
+        
+      - name: Docker 설정
+        uses: docker/setup-buildx-action@v2
+        
+      - name: Docker 로그인
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: API Docker 이미지 빌드
+        uses: docker/build-push-action@v4
+        with:
+          context: ./apps/api
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/nottoday-api:latest
+          
+      - name: LLM Server Docker 이미지 빌드
+        uses: docker/build-push-action@v4
+        with:
+          context: ./infra/docker
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:latest
+          
+      - name: Agent Docker 이미지 빌드
+        uses: docker/build-push-action@v4
+        with:
+          context: ./apps/agent
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:latest
+          
+      - name: 모델 파일 배포 서버로 복사
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_PRIVATE_KEY }}
+          source: models.tar.gz
+          target: /tmp/
+        
+      - name: 서버 배포 스크립트 실행
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_PRIVATE_KEY }}
+          script: |
+            mkdir -p ~/nottoday/models
+            tar -xzf /tmp/models.tar.gz -C ~/nottoday
+            
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nottoday-api:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:latest
+            
+            # 기존 서비스 중단
+            docker-compose -f ~/nottoday/docker-compose.yml down || true
+            
+            # docker-compose.yml 파일 생성
+            cat > ~/nottoday/docker-compose.yml << 'EOL'
+            version: "3.9"
+            services:
+              llm:
+                image: ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:latest
+                volumes: ["./models:/models"]
+                ports: ["7000:7000"]
+              agent:
+                image: ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:latest
+                environment:
+                  - LLAMA=http://llm:7000/completion
+                depends_on: [llm]
+                ports: ["8000:8000"]
+              api:
+                image: ${{ secrets.DOCKER_USERNAME }}/nottoday-api:latest
+                ports: ["8080:8080"]
+            EOL
+            
+            # 서비스 시작
+            cd ~/nottoday && docker-compose up -d
+            
+      - name: Vercel 배포 (웹)
         uses: amondnet/vercel-action@v20
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./
-          vercel-args: '--prod' 
+          vercel-org-id: ${{ secrets.ORG_ID }}
+          vercel-project-id: ${{ secrets.PROJECT_ID }}
+          working-directory: ./apps/web
+          vercel-args: '--prod'
+          
+      - name: 슬랙 알림
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: |
+            NotToday Medical AI v3.4 CPU Edition 배포 ${{ job.status == 'success' && '성공 ✅' || '실패 ❌' }}
+            
+            시간: ${{ env.DEPLOY_TIME }}
+            버전: ${{ env.VERSION }}
+            환경: Production
+            URL: https://nottoday.vercel.app
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: always()
+          
+      - name: 배포 결과 기록
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.number }}
+          body: |
+            # 🚀 배포 완료
+
+            ✅ [NotToday v3.4 CPU Edition] 배포가 완료되었습니다!
+            
+            - **배포 시간**: ${{ env.DEPLOY_TIME }}
+            - **커밋**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            - **배포 URL**: https://nottoday.vercel.app
+            - **API 서버**: https://api.nottoday.app
+            
+            ### CPU 전용 모델 정보
+            
+            | 모델 | 크기 | 기능 |
+            |-----|------|------|
+            | TinyLlamaMed-1.1B | ≈1.2 GB | 일반 상담 / 추론 |
+            | Bio-MiniCPM-2B | ≈2.0 GB | 심층 임상 Q&A |
+            | BioGPT-350M | ≈0.6 GB | PubMed RAG 인코더 |
+            | ECGNet-small | ~80 MB | 1-lead ECG 부정맥 |
+        if: github.event_name == 'pull_request' 

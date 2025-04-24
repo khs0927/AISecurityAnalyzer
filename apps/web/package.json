@@ -1,0 +1,39 @@
+{
+  "name": "web",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "@tanstack/react-query": "^5.35.0",
+    "@trpc/react-query": "^10.45.1",
+    "@trpc/client": "^10.45.1",
+    "@trpc/server": "^10.45.1",
+    "pusher-js": "^8.4.0-rc2",
+    "recharts": "^2.12.3",
+    "react-router-dom": "^6.22.3",
+    "@domain": "workspace:*",
+    "react-icons": "^5.1.0",
+    "date-fns": "^3.6.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "vite": "^5.2.4",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.4.3",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "autoprefixer": "^10.4.17",
+    "tailwindcss": "^4.1.4",
+    "postcss": "^8.4.31",
+    "eslint": "^9.1.2",
+    "eslint-plugin-react": "^7.34.1",
+    "eslint-plugin-react-hooks": "^4.6.0"
+  }
+} 

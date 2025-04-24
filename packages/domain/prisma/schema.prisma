@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String       @id @default(uuid())
+  email     String       @unique
+  name      String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  healthData HealthData[]
+  riskAlerts RiskAlert[]
+}
+
+model HealthData {
+  id          String   @id @default(uuid())
+  userId      String
+  timestamp   DateTime @default(now())
+  heartRate   Float?
+  oxygenLevel Float?
+  ecg         Json?
+  riskScore   Float?
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model RiskAlert {
+  id        String   @id @default(uuid())
+  userId    String
+  riskLevel String   // low, medium, high, critical
+  message   String
+  timestamp DateTime @default(now())
+  isRead    Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+} 

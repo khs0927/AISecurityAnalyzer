@@ -1,7 +1,13 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, AppState, AppStateStatus } from 'react-native';
 import { BleManager, Device, Subscription, BleError } from 'react-native-ble-plx';
 import { connectWebSocket } from '../api/client';
+import * as Notifications from 'expo-notifications';
+import { io, Socket } from 'socket.io-client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
+import Constants from 'expo-constants';
+import Pusher from 'pusher-js/react-native';
 
 interface SmartWatchData {
   heartRate: number | null;
@@ -21,6 +27,28 @@ interface DeviceInfo {
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+interface HealthData {
+  userId?: string;
+  heartRate: number;
+  oxygenLevel: number;
+  ecgData: number[];
+  timestamp: string;
+}
+
+interface HistoricalData {
+  daily: HealthData[];
+  weekly: HealthData[];
+  monthly: HealthData[];
+}
+
+interface RiskData {
+  userId: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  riskFactors: string[];
+  recommendations: string[];
+  timestamp: string;
+}
+
 interface SmartWatchContextType {
   isConnected: boolean;
   connectionStatus: ConnectionStatus;
@@ -34,6 +62,16 @@ interface SmartWatchContextType {
   clearData: () => void;
   errorMessage: string | null;
   isScanning: boolean;
+  connecting: boolean;
+  currentData: HealthData | null;
+  historicalData: HistoricalData;
+  riskData: RiskData | null;
+  connect: (userId: string) => Promise<void>;
+  disconnect: () => void;
+  refreshData: () => Promise<void>;
+  sendHealthData: (data: Partial<HealthData>) => Promise<void>;
+  toggleRiskAnalysis: () => void;
+  isAnalyzing: boolean;
 }
 
 // BLE 서비스 및 특성 UUID
@@ -71,6 +109,19 @@ export const SmartWatchProvider: React.FC<{ children: ReactNode }> = ({ children
     ppgData: [],
     lastUpdated: null
   });
+  
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [currentData, setCurrentData] = useState<HealthData | null>(null);
+  const [historicalData, setHistoricalData] = useState<HistoricalData>({
+    day: [],
+    week: [],
+    month: [],
+  });
+  const [riskData, setRiskData] = useState<RiskData | null>(null);
+  const [riskHistory, setRiskHistory] = useState<RiskData[]>([]);
+  const [isRiskAnalysisActive, setIsRiskAnalysisActive] = useState(true);
   
   // 기기 검색
   const scanForDevices = async (): Promise<Device[]> => {
@@ -332,8 +383,260 @@ export const SmartWatchProvider: React.FC<{ children: ReactNode }> = ({ children
     });
   };
   
+  // 알림 설정
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+
+    // 앱 상태 변경 감지
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription.remove();
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, []);
+
+  // 앱 상태 변경 처리
+  const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    if (nextAppState === 'active') {
+      // 앱이 포그라운드로 돌아오면 연결 상태 확인
+      if (socket && !socket.connected && isConnected) {
+        reconnect();
+      }
+    }
+  };
+
+  // 알림 등록
+  async function registerForPushNotificationsAsync() {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    
+    if (finalStatus !== 'granted') {
+      Alert.alert('알림 권한 필요', '위험 알림을 받기 위해 알림 권한이 필요합니다.');
+      return;
+    }
+    
+    // 알림 핸들러 설정
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  }
+
+  // 알림 표시
+  const sendNotification = async (title: string, body: string) => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        sound: 'default',
+      },
+      trigger: null,
+    });
+  };
+
+  // 서버 연결
+  const connect = async () => {
+    try {
+      setConnecting(true);
+      
+      // 저장된 사용자 정보 가져오기
+      const userId = await AsyncStorage.getItem('userId');
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!userId || !token) {
+        throw new Error('인증 정보가 없습니다. 로그인이 필요합니다.');
+      }
+      
+      // 소켓 연결
+      const newSocket = io(API_URL, {
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
+      
+      newSocket.on('connect', () => {
+        console.log('Socket connected');
+        
+        // 인증
+        newSocket.emit('authenticate', { userId, token });
+      });
+      
+      newSocket.on('authenticate_success', async () => {
+        setIsConnected(true);
+        setConnecting(false);
+        console.log('Authentication successful');
+        
+        // 연결 성공 시 데이터 갱신
+        await refreshData();
+      });
+      
+      newSocket.on('authenticate_error', (error) => {
+        console.error('Authentication failed:', error);
+        setConnecting(false);
+        Alert.alert('연결 실패', '인증에 실패했습니다. 다시 로그인해주세요.');
+        disconnect();
+      });
+      
+      // 위험도 업데이트 수신
+      newSocket.on('risk_update', (data: RiskData) => {
+        setRiskData(data);
+        // 위험도 히스토리에 추가 (최대 50개 유지)
+        setRiskHistory(prev => {
+          const updated = [data, ...prev];
+          return updated.slice(0, 50);
+        });
+      });
+      
+      // 위험 알림 수신
+      newSocket.on('risk_alert', async (data: { level: string, message: string }) => {
+        const title = data.level === 'critical' ? '심각한 위험 감지!' : '주의 필요';
+        await sendNotification(title, data.message);
+      });
+      
+      // 위험도 분석 상태 업데이트
+      newSocket.on('risk_analysis_status', (data: { active: boolean }) => {
+        setIsRiskAnalysisActive(data.active);
+      });
+      
+      newSocket.on('disconnect', () => {
+        console.log('Socket disconnected');
+        setIsConnected(false);
+      });
+      
+      newSocket.on('error', (error) => {
+        console.error('Socket error:', error);
+      });
+      
+      setSocket(newSocket);
+    } catch (error) {
+      console.error('Connection error:', error.message);
+      setConnecting(false);
+      Alert.alert('연결 실패', error.message);
+    }
+  };
+
+  // 재연결
+  const reconnect = () => {
+    if (socket) {
+      socket.connect();
+    } else {
+      connect();
+    }
+  };
+
+  // 연결 해제
+  const disconnect = () => {
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+    setIsConnected(false);
+  };
+
+  // 데이터 갱신
+  const refreshData = async () => {
+    try {
+      // 실제 API 호출 구현
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) throw new Error('사용자 ID가 없습니다');
+      
+      // 최신 데이터 가져오기
+      const responseLatest = await fetch(`${API_URL}/api/health/latest/${userId}`);
+      if (responseLatest.ok) {
+        const latestData = await responseLatest.json();
+        setCurrentData(latestData);
+      }
+      
+      // 일일 데이터
+      const responseDay = await fetch(`${API_URL}/api/health/history/${userId}?period=day`);
+      // 주간 데이터
+      const responseWeek = await fetch(`${API_URL}/api/health/history/${userId}?period=week`);
+      // 월간 데이터
+      const responseMonth = await fetch(`${API_URL}/api/health/history/${userId}?period=month`);
+      
+      if (responseDay.ok && responseWeek.ok && responseMonth.ok) {
+        const dayData = await responseDay.json();
+        const weekData = await responseWeek.json();
+        const monthData = await responseMonth.json();
+        
+        setHistoricalData({
+          day: dayData,
+          week: weekData,
+          month: monthData,
+        });
+      }
+      
+      // 최신 위험도 데이터
+      const responseRisk = await fetch(`${API_URL}/api/health/risk/${userId}/latest`);
+      if (responseRisk.ok) {
+        const riskData = await responseRisk.json();
+        setRiskData(riskData);
+      }
+      
+      // 위험도 히스토리
+      const responseRiskHistory = await fetch(`${API_URL}/api/health/risk/${userId}/history?limit=20`);
+      if (responseRiskHistory.ok) {
+        const riskHistoryData = await responseRiskHistory.json();
+        setRiskHistory(riskHistoryData);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Data refresh error:', error.message);
+      return false;
+    }
+  };
+
+  // 건강 데이터 전송
+  const sendHealthData = (data: Partial<HealthData>) => {
+    if (!socket || !isConnected) {
+      console.error('Socket not connected');
+      return;
+    }
+    
+    const timestampedData = {
+      ...data,
+      timestamp: Date.now(),
+    };
+    
+    socket.emit('health_data', timestampedData);
+    
+    // 로컬 상태 업데이트
+    if (currentData) {
+      const updatedData = { ...currentData, ...timestampedData };
+      setCurrentData(updatedData);
+    } else {
+      setCurrentData({
+        heartRate: data.heartRate || 0,
+        oxygenLevel: data.oxygenLevel || 0,
+        ecgData: data.ecgData || [],
+        timestamp: timestampedData.timestamp,
+      });
+    }
+  };
+
+  // 위험도 분석 토글
+  const toggleRiskAnalysis = (active: boolean) => {
+    if (socket && isConnected) {
+      socket.emit('toggle_risk_analysis', { active });
+      setIsRiskAnalysisActive(active);
+    }
+  };
+
   const contextValue: SmartWatchContextType = {
-    isConnected: connectionStatus === 'connected',
+    isConnected,
     connectionStatus,
     deviceInfo,
     data,
@@ -344,7 +647,18 @@ export const SmartWatchProvider: React.FC<{ children: ReactNode }> = ({ children
     stopHeartRateMonitoring,
     clearData,
     errorMessage,
-    isScanning
+    isScanning,
+    connecting,
+    currentData,
+    historicalData,
+    riskData,
+    riskHistory,
+    connect,
+    disconnect: disconnect,
+    refreshData,
+    sendHealthData,
+    toggleRiskAnalysis,
+    isRiskAnalysisActive,
   };
   
   return (

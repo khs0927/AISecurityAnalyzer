@@ -53,6 +53,69 @@ const EmergencyGuideStack = ({ webAppData, refreshData, loading }) => {
   );
 };
 
+// API 통합 설정
+const API_CONFIG = {
+  // 공통 인증키
+  API_KEY: 't6l9sApoYD1s94RX8r8mk68mMtGPVT4gsKp7eG3e86b2tzDANPjoHscFR7C/6i0arJe3lMxEUhELK5o6avD3g==',
+  ENCODED_KEY: 't6l9sApoYD1s94RX8r8mk68mMtGPVT4gsKp7eG3e86b2tzDANPjoHscFR7C%2F6i0arJe3lMxEUhELK5o6avD3g%3D%3D',
+  
+  // API 엔드포인트
+  ENDPOINTS: {
+    DRUG_INFO: 'https://apis.data.go.kr/1471000/DrbEasyDrugInfoService',
+    HOSPITAL_SEARCH: 'https://apis.data.go.kr/B552657/HsptlAsembySearchService',
+    HOSPITAL_INFO: 'https://apis.data.go.kr/B551182/hospInfoServicev2'
+  },
+  
+  // 데이터 포맷
+  FORMATS: {
+    DRUG_INFO: 'JSON+XML',
+    HOSPITAL_SEARCH: 'XML',
+    HOSPITAL_INFO: 'XML'
+  },
+  
+  // 활용 기간
+  VALID_PERIOD: '2025-04-12 ~ 2027-04-13'
+};
+
+// API 호출 함수
+async function fetchDrugInfo(drugName) {
+  const url = `${API_CONFIG.ENDPOINTS.DRUG_INFO}/getDrbEasyDrugList?serviceKey=${API_CONFIG.ENCODED_KEY}&itemName=${encodeURIComponent(drugName)}&type=json`;
+  return await fetchAPI(url);
+}
+
+async function searchHospitals(location) {
+  const url = `${API_CONFIG.ENDPOINTS.HOSPITAL_SEARCH}/getHsptlMdcncListInfoInqire?serviceKey=${API_CONFIG.ENCODED_KEY}&Q0=${encodeURIComponent(location)}&pageNo=1&numOfRows=10`;
+  return await fetchAPI(url);
+}
+
+async function getHospitalInfo(hospitalId) {
+  const url = `${API_CONFIG.ENDPOINTS.HOSPITAL_INFO}/getHospBasisList?serviceKey=${API_CONFIG.ENCODED_KEY}&HPID=${hospitalId}&pageNo=1&numOfRows=10`;
+  return await fetchAPI(url);
+}
+
+// 공통 API 호출 유틸리티
+async function fetchAPI(url) {
+  try {
+    const response = await fetch(url);
+    const data = await response.text();
+    return parseAPIResponse(data, url);
+  } catch (error) {
+    console.error('API 호출 오류:', error);
+    throw error;
+  }
+}
+
+// 응답 파싱 함수
+function parseAPIResponse(data, url) {
+  if (url.includes(API_CONFIG.ENDPOINTS.DRUG_INFO) && url.includes('type=json')) {
+    return JSON.parse(data);
+  } else {
+    // XML 파싱 로직
+    const parser = new DOMParser();
+    return parser.parseFromString(data, 'text/xml');
+  }
+}
+
 // App 컴포넌트 - 메인 탭 네비게이션 구성
 export default function App() {
   const [webAppData, setWebAppData] = useState(null);

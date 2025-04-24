@@ -1,109 +1,217 @@
-name: CI Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, develop, feature/** ]
+    branches: [ main, staging, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, staging ]
+  workflow_dispatch:
 
 jobs:
-  setup-matrix:
+  lint-and-test:
+    name: 코드 품질 및 테스트
     runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    
     steps:
-      - id: set-matrix
-        run: echo "matrix={\"project\":[\"root\",\"client\",\"server\",\"mobile\"]}" >> $GITHUB_OUTPUT
-
-  lint-build-test:
-    needs: setup-matrix
-    runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout code
+      - name: 코드 체크아웃
         uses: actions/checkout@v3
-
-      - name: Use Node.js 18.x
+        
+      - name: Node.js 설정
         uses: actions/setup-node@v3
         with:
-          node-version: 18
-          cache: 'npm'
-
-      - name: Set working directory
-        run: |
-          if [[ "${{ matrix.project }}" != "root" ]]; then
-            echo "WORKING_DIR=${{ matrix.project }}" >> $GITHUB_ENV
-          else
-            echo "WORKING_DIR=." >> $GITHUB_ENV
-          fi
-
-      - name: Install dependencies
-        run: |
-          cd $WORKING_DIR
-          if [ -f package.json ]; then
-            npm ci
-          fi
-
-      - name: Run Lint (if available)
-        run: |
-          cd $WORKING_DIR
-          if npm run | grep -q "lint"; then
-            npm run lint
-          else
-            echo "No lint script, skipping."
-          fi
-
-      - name: Run Tests (if available)
-        run: |
-          cd $WORKING_DIR
-          if npm run | grep -q "test"; then
-            npm test --if-present -- --runInBand
-          else
-            echo "No test script, skipping."
-          fi
-
-      - name: Build (if available)
-        run: |
-          cd $WORKING_DIR
-          if npm run | grep -q "build"; then
-            npm run build
-          else
-            echo "No build script, skipping."
-          fi
-
-      - name: Upload Build Artifact
-        if: success() && matrix.project != 'root'
-        uses: actions/upload-artifact@v4
+          node-version: '20'
+          
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
         with:
-          name: ${{ matrix.project }}-build
-          path: ${{ env.WORKING_DIR }}/dist/**
-          if-no-files-found: ignore
-
-      - name: Check env files
-        if: matrix.project == 'root'
+          version: 9
+          run_install: false
+          
+      - name: pnpm 캐시 가져오기
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+            
+      - name: Python 설정
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Poetry 설정
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.2
+          
+      - name: 의존성 설치
         run: |
-          npm run lint:env
-          npm run verify:env
-
-  security-scan:
-    needs: lint-build-test
+          pnpm install
+          poetry config virtualenvs.in-project true
+          cd apps/agent && poetry install
+          
+      - name: 커밋 린트
+        uses: wagoid/commitlint-github-action@v5
+        
+      - name: 코드 린트
+        run: pnpm lint
+        
+      - name: 포맷팅 검사
+        run: pnpm format --check
+        
+      - name: 단위 테스트 실행
+        run: pnpm test
+        
+      - name: Python 테스트 실행
+        run: |
+          cd apps/agent
+          poetry run python -m pytest
+  
+  build:
+    name: 빌드 및 아티팩트 생성
     runs-on: ubuntu-latest
+    needs: lint-and-test
+    
     steps:
-      - name: Checkout code
+      - name: 코드 체크아웃
         uses: actions/checkout@v3
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-      - name: Secret Scan
-        uses: trufflesecurity/trufflehog@v3
+        
+      - name: Node.js 설정
+        uses: actions/setup-node@v3
         with:
-          scanArguments: "--no-update --regex --entropy=False --json"
-
-  deploy:
-    needs: [lint-build-test, security-scan]
-    if: github.ref == 'refs/heads/main' && success()
-    uses: ./.github/workflows/deploy.yml
-    secrets: inherit 
+          node-version: '20'
+          
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+          
+      - name: pnpm 캐시 가져오기
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+      
+      - name: Python 설정
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Poetry 설정
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.2
+            
+      - name: 모든 의존성 설치
+        run: |
+          pnpm install
+          cd apps/agent && poetry install
+      
+      - name: 모델 다운로드 (샘플만)
+        run: |
+          mkdir -p models
+          # 테스트용 샘플 모델 파일 생성 (실제 파일 대체)
+          echo "Sample model file" > models/TinyLlama-1.1B-Chat-v1.0.Q4_K_M.gguf
+          echo "Sample model file" > models/MiniCPM-Med-2B-sft.Q4_K_M.gguf
+          echo "Sample model file" > models/bioGPT-350m.Q4_K_M.gguf
+          echo "Sample ONNX file" > models/ecgnet-small.onnx
+          # 실제 파이프라인에서는 아래와 같이 모델 다운로드
+          # ./scripts/fetch_models.sh
+            
+      - name: 서버 빌드
+        run: cd apps/api && pnpm build
+        
+      - name: 클라이언트 빌드
+        run: cd apps/web && pnpm build
+        
+      - name: 모바일 빌드
+        run: cd apps/mobile && pnpm build
+        
+      - name: 소나큐브 검사
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          
+      - name: 빌드 결과 보관
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            apps/api/dist
+            apps/web/dist
+            apps/mobile/ios/build
+            apps/mobile/android/app/build
+            models/*.onnx
+          retention-days: 3
+          
+  docker:
+    name: 도커 이미지 빌드
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: 빌드 결과 다운로드
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          
+      - name: Docker 빌드 캐시 설정
+        uses: docker/setup-buildx-action@v2
+        
+      - name: 도커 로그인
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: API 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: apps/api
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-api:latest
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-api:${{ github.sha }}
+            
+      - name: Agent 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: apps/agent
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:latest
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:${{ github.sha }}
+            
+      - name: Web 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: apps/web
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-web:latest
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-web:${{ github.sha }}
+            
+      - name: LLM 서버 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: ./infra/docker
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:latest
+            ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:${{ github.sha }} 

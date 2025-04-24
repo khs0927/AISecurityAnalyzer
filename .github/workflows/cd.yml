@@ -1,0 +1,274 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'docker-compose.yml'
+      - 'infra/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '배포 환경 선택'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  prepare-models:
+    name: 모델 다운로드 및 준비
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: 캐시된 모델 확인
+        id: model-cache
+        uses: actions/cache@v3
+        with:
+          path: models
+          key: ${{ runner.os }}-models-${{ hashFiles('scripts/fetch_models.sh') }}
+          
+      - name: 모델 다운로드
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p models
+          ./scripts/fetch_models.sh
+          
+      - name: 모델 타르볼 생성
+        run: tar -czvf models.tar.gz models
+        
+      - name: 모델 아티팩트 업로드
+        uses: actions/upload-artifact@v3
+        with:
+          name: model-artifacts
+          path: models.tar.gz
+          retention-days: 1
+
+  deploy-server:
+    name: 서버 배포
+    runs-on: ubuntu-latest
+    needs: prepare-models
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: Node.js 설정
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+          
+      - name: 종속성 설치 - API
+        run: |
+          cd apps/api
+          pnpm install
+          
+      - name: API 빌드
+        run: |
+          cd apps/api
+          pnpm build
+          
+      - name: Python 설정
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Poetry 설정
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.2
+          
+      - name: 종속성 설치 - Agent
+        run: |
+          cd apps/agent
+          poetry install --no-dev
+          
+      - name: 모델 다운로드
+        uses: actions/download-artifact@v3
+        with:
+          name: model-artifacts
+          
+      - name: 모델 압축 해제
+        run: tar -xzvf models.tar.gz
+        
+      - name: Docker 설정
+        uses: docker/setup-buildx-action@v2
+        
+      - name: Docker Hub 로그인
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: LLM 서버 Docker 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: ./infra/docker
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:latest
+          
+      - name: API 서버 Docker 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: ./apps/api
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/nottoday-api:latest
+          
+      - name: Agent 서버 Docker 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v4
+        with:
+          context: ./apps/agent
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:latest
+          
+      - name: 모델 파일 AWS로 전송
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USERNAME }}
+          key: ${{ secrets.AWS_PRIVATE_KEY }}
+          source: models.tar.gz
+          target: /tmp
+          
+      - name: 서버 배포 to AWS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USERNAME }}
+          key: ${{ secrets.AWS_PRIVATE_KEY }}
+          script: |
+            mkdir -p ~/models
+            tar -xzvf /tmp/models.tar.gz -C ~/
+            
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nottoday-api:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:latest
+            
+            docker stop nottoday-llm nottoday-api nottoday-agent || true
+            docker rm nottoday-llm nottoday-api nottoday-agent || true
+            
+            docker run -d --name nottoday-llm -p 7000:7000 -v ~/models:/models ${{ secrets.DOCKER_USERNAME }}/nottoday-llm:latest
+            docker run -d --name nottoday-agent -p 8000:8000 --env-file .env.production -e LLAMA=http://nottoday-llm:7000/completion ${{ secrets.DOCKER_USERNAME }}/nottoday-agent:latest
+            docker run -d --name nottoday-api -p 5000:5000 --env-file .env.production ${{ secrets.DOCKER_USERNAME }}/nottoday-api:latest
+      
+  deploy-client:
+    name: 클라이언트 배포
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: Node.js 설정
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+          
+      - name: 종속성 설치 - 클라이언트
+        run: |
+          cd apps/web
+          pnpm install
+          
+      - name: 클라이언트 빌드
+        run: |
+          cd apps/web
+          pnpm build
+          
+      - name: Vercel 배포
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.ORG_ID }}
+          vercel-project-id: ${{ secrets.PROJECT_ID }}
+          working-directory: ./apps/web
+          vercel-args: '--prod'
+
+  deploy-mobile:
+    name: 모바일 앱 배포
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+        
+      - name: Node.js 설정
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+          
+      - name: 종속성 설치 - 모바일
+        run: |
+          cd apps/mobile
+          pnpm install
+          
+      - name: Expo CLI 설치
+        run: pnpm add -g expo-cli eas-cli
+        
+      - name: EAS 로그인
+        run: |
+          cd apps/mobile
+          npx eas-cli login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
+          
+      - name: EAS 앱 빌드
+        run: |
+          cd apps/mobile
+          npx eas-cli build --platform all --non-interactive
+          
+      - name: EAS 앱 제출
+        run: |
+          cd apps/mobile
+          npx eas-cli submit --platform all --non-interactive
+          
+  notify:
+    name: 배포 알림
+    runs-on: ubuntu-latest
+    needs: [deploy-server, deploy-client, deploy-mobile]
+    if: always()
+    
+    steps:
+      - name: 배포 상태 확인
+        id: status
+        run: |
+          if [[ "${{ needs.deploy-server.result }}" == "success" && "${{ needs.deploy-client.result }}" == "success" && "${{ needs.deploy-mobile.result }}" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: 슬랙 알림
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ steps.status.outputs.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: |
+            NotToday Medical AI v3.4 CPU Edition 배포 ${{ steps.status.outputs.status == 'success' && '성공 ✅' || '실패 ❌' }}
+            
+            서버: ${{ needs.deploy-server.result }}
+            클라이언트: ${{ needs.deploy-client.result }}
+            모바일: ${{ needs.deploy-mobile.result }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 

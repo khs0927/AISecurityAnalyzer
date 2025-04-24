@@ -19,6 +19,22 @@ export interface EmitOptions {
   except?: string; // 제외할 소켓 ID
 }
 
+// 실시간 데이터 타입
+interface RealTimeData {
+  heartRate?: number;
+  oxygenLevel?: number;
+  ecgData?: number[];
+  timestamp?: number;
+}
+
+// 위험도 데이터 타입
+interface RiskData {
+  riskScore: number;
+  explanation: string[];
+  recommendations: string[];
+  timestamp: number;
+}
+
 /**
  * 웹소켓 연결 및 이벤트를 관리하는 클래스
  */
@@ -27,6 +43,8 @@ export class SocketManager {
   private io: SocketIOServer | null = null;
   private clients: Map<string, SocketClient> = new Map();
   private userIdToSocketIds: Map<number, Set<string>> = new Map();
+  private userSockets: Map<string, string> = new Map(); // userId -> socketId
+  private riskAnalysisActive: boolean = true;
   
   private constructor() {}
   
@@ -117,6 +135,43 @@ export class SocketManager {
       // 활동 업데이트 이벤트 핸들러
       socket.on('activity', () => {
         this.updateClientActivity(clientId);
+      });
+      
+      // 실시간 건강 데이터 수신
+      socket.on('health_data', (data: RealTimeData) => {
+        try {
+          // 데이터 유효성 검사
+          if (!data || (!data.heartRate && !data.oxygenLevel && !data.ecgData)) {
+            return;
+          }
+          
+          // 타임스탬프 추가
+          const timestampedData = {
+            ...data,
+            timestamp: data.timestamp || Date.now()
+          };
+          
+          // 모니터링 로그
+          monitoring.log('socket', 'info', `Health data received: HR=${data.heartRate}, O2=${data.oxygenLevel}`);
+          
+          // 필요한 경우 데이터 저장
+          
+          // 실시간 위험도 분석
+          if (this.riskAnalysisActive) {
+            this.analyzeRiskAndNotify(socket, timestampedData);
+          }
+          
+          // 연결된 다른 클라이언트에게 데이터 전파 (가디언 기능)
+          // this.broadcastHealthData(userId, timestampedData);
+        } catch (error) {
+          monitoring.log('socket', 'error', `Error processing health data: ${error.message}`);
+        }
+      });
+      
+      // 위험도 분석 기능 토글
+      socket.on('toggle_risk_analysis', (data: { active: boolean }) => {
+        this.riskAnalysisActive = data.active;
+        socket.emit('risk_analysis_status', { active: this.riskAnalysisActive });
       });
     });
   }
@@ -408,6 +463,120 @@ export class SocketManager {
     });
     
     return rooms.size;
+  }
+  
+  // 실시간 위험도 분석 및 알림
+  private async analyzeRiskAndNotify(socket: Socket, healthData: RealTimeData) {
+    try {
+      // 간단한 위험도 분석 (실제로는 더 복잡한 로직이나 API 호출 필요)
+      let riskScore = 0;
+      const explanation: string[] = [];
+      const recommendations: string[] = [];
+      
+      // 심박수 기반 위험도
+      if (healthData.heartRate) {
+        if (healthData.heartRate > 100) {
+          riskScore += 20;
+          explanation.push(`빠른 심박수 (${healthData.heartRate} bpm)`);
+          recommendations.push('안정을 취하고 심호흡을 하세요.');
+        } else if (healthData.heartRate < 60) {
+          riskScore += 15;
+          explanation.push(`느린 심박수 (${healthData.heartRate} bpm)`);
+          recommendations.push('몸을 따뜻하게 하고 수분을 섭취하세요.');
+        }
+      }
+      
+      // 산소포화도 기반 위험도
+      if (healthData.oxygenLevel) {
+        if (healthData.oxygenLevel < 90) {
+          riskScore += 30;
+          explanation.push(`낮은 산소포화도 (${healthData.oxygenLevel}%)`);
+          recommendations.push('즉시 의료 지원을 요청하세요.');
+        } else if (healthData.oxygenLevel < 95) {
+          riskScore += 15;
+          explanation.push(`정상보다 낮은 산소포화도 (${healthData.oxygenLevel}%)`);
+          recommendations.push('심호흡을 하고 환기가 잘 되는 공간으로 이동하세요.');
+        }
+      }
+      
+      // ECG 데이터 분석
+      if (healthData.ecgData && healthData.ecgData.length > 0) {
+        // 간단한 분석 로직 (실제로는 더 복잡한 알고리즘 필요)
+        const ecgSum = healthData.ecgData.reduce((a, b) => a + b, 0);
+        const ecgAvg = ecgSum / healthData.ecgData.length;
+        const ecgVariance = healthData.ecgData.reduce((sum, val) => sum + Math.pow(val - ecgAvg, 2), 0) / healthData.ecgData.length;
+        
+        if (ecgVariance > 0.5) {
+          riskScore += 25;
+          explanation.push('ECG 신호의 불규칙성 감지');
+          recommendations.push('안정을 취하고 의사와 상담하세요.');
+        }
+      }
+      
+      // 최종 위험도 계산 (최대 100으로 제한)
+      riskScore = Math.min(riskScore, 100);
+      
+      // 기본 권장사항 추가
+      if (recommendations.length === 0) {
+        if (riskScore < 20) {
+          recommendations.push('정상적인 수치입니다. 건강한 생활습관을 유지하세요.');
+        } else if (riskScore < 50) {
+          recommendations.push('적절한 휴식과 규칙적인 생활을 유지하세요.');
+        } else {
+          recommendations.push('의사와 상담하는 것이 좋습니다.');
+        }
+      }
+      
+      // 위험도 데이터 구성
+      const riskData: RiskData = {
+        riskScore,
+        explanation,
+        recommendations,
+        timestamp: Date.now()
+      };
+      
+      // 위험도 데이터 전송
+      socket.emit('risk_update', riskData);
+      
+      // 위험도가 높은 경우 알림 전송
+      if (riskScore >= 70) {
+        socket.emit('risk_alert', {
+          level: 'critical',
+          message: '심각한 위험이 감지되었습니다. 즉시 조치가 필요합니다.',
+          timestamp: Date.now()
+        });
+      } else if (riskScore >= 40) {
+        socket.emit('risk_alert', {
+          level: 'warning',
+          message: '주의가 필요한 상태입니다. 안정을 취하고 상태를 확인하세요.',
+          timestamp: Date.now()
+        });
+      }
+      
+      monitoring.log('socket', 'info', `Risk analysis sent: ${riskScore}/100`);
+    } catch (error) {
+      monitoring.log('socket', 'error', `Error in risk analysis: ${error.message}`);
+    }
+  }
+  
+  // 특정 사용자에게 메시지 전송
+  public sendToUser(userId: string, event: string, data: any) {
+    const socketId = this.userSockets.get(userId);
+    if (socketId) {
+      this.io.to(socketId).emit(event, data);
+    }
+  }
+  
+  // 모든 클라이언트에게 메시지 브로드캐스트
+  public broadcast(event: string, data: any) {
+    this.io.emit(event, data);
+  }
+  
+  // 여러 사용자에게 메시지 전송
+  public sendToUsers(userIds: string[], event: string, data: any) {
+    userIds.forEach(userId => {
+      this.sendToUser(userId, event, data);
+    });
   }
 }
 
