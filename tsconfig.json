@@ -11,9 +11,9 @@
   "exclude": ["node_modules", "dist", "build"],
   "compilerOptions": {
     "target": "ES2020",
-    "module": "NodeNext",
+    "module": "CommonJS",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "node",
     "strict": true,
     "jsx": "react-jsx",
     "esModuleInterop": true,
@@ -30,6 +30,7 @@
       "@server/*": ["server/*"],
       "@mobile/*": ["mobile/app/*"],
       "@shared/*": ["shared/*"]
-    }
+    },
+    "outDir": "dist"
   }
 }
