@@ -1,71 +1,76 @@
 #!/bin/bash
 
-# GitHub Actions Secrets 등록 스크립트
-# 저장소 루트에서 실행: bash scripts/set-github-secrets.sh
-
-echo "GitHub Actions Secrets 등록을 시작합니다..."
-
-# 시크릿 값 설정
-SESSION_SECRET="[YOUR_SESSION_SECRET]"
-OPENAI_API_KEY="[YOUR_OPENAI_API_KEY]"
-DATABASE_URL="[YOUR_DATABASE_URL]"
-PGDATABASE="neondb"
-PGHOST="[YOUR_PG_HOST]"
-PGPORT="5432"
-PGUSER="[YOUR_PG_USER]"
-PGPASSWORD="[YOUR_PG_PASSWORD]"
-VITE_FIREBASE_API_KEY="[YOUR_FIREBASE_API_KEY]"
-VITE_FIREBASE_APP_ID="[YOUR_FIREBASE_APP_ID]"
-VITE_FIREBASE_PROJECT_ID="[YOUR_FIREBASE_PROJECT_ID]"
-FIREBASE_DATABASE_URL="[YOUR_FIREBASE_DB_URL]"
-PUBMED_API_KEY="[YOUR_PUBMED_API_KEY]"
-GITHUB_TOKEN="[YOUR_GITHUB_TOKEN]"
-HF_TOKEN="[YOUR_HF_TOKEN]"
-HUGGINGFACE_TOKEN="[YOUR_HUGGINGFACE_TOKEN]"
-HUGGINGFACE_API_KEY="[YOUR_HUGGINGFACE_API_KEY]"
-KAKAO_MAP_API_KEY="[YOUR_KAKAO_MAP_API_KEY]"
-VERCEL_TOKEN="[YOUR_VERCEL_TOKEN]"
-
-# Vercel 정보 - khs0927s-projects/not-today 프로젝트의 ID 값 (추후 수정 필요)
-VERCEL_ORG_ID="[YOUR_VERCEL_ORG_ID]"
-VERCEL_PROJECT_ID="[YOUR_VERCEL_PROJECT_ID]"
-
-# GitHub CLI로 시크릿 등록
-if command -v gh &> /dev/null; then
-    echo "GitHub CLI를 사용하여 시크릿을 등록합니다..."
-    
-    gh secret set SESSION_SECRET --body "$SESSION_SECRET"
-    gh secret set OPENAI_API_KEY --body "$OPENAI_API_KEY"
-    gh secret set DATABASE_URL --body "$DATABASE_URL"
-    gh secret set PGDATABASE --body "$PGDATABASE"
-    gh secret set PGHOST --body "$PGHOST"
-    gh secret set PGPORT --body "$PGPORT"
-    gh secret set PGUSER --body "$PGUSER"
-    gh secret set PGPASSWORD --body "$PGPASSWORD"
-    gh secret set VITE_FIREBASE_API_KEY --body "$VITE_FIREBASE_API_KEY"
-    gh secret set VITE_FIREBASE_APP_ID --body "$VITE_FIREBASE_APP_ID"
-    gh secret set VITE_FIREBASE_PROJECT_ID --body "$VITE_FIREBASE_PROJECT_ID"
-    gh secret set FIREBASE_DATABASE_URL --body "$FIREBASE_DATABASE_URL"
-    gh secret set PUBMED_API_KEY --body "$PUBMED_API_KEY"
-    gh secret set GITHUB_TOKEN --body "$GITHUB_TOKEN"
-    gh secret set HF_TOKEN --body "$HF_TOKEN"
-    gh secret set HUGGINGFACE_TOKEN --body "$HUGGINGFACE_TOKEN"
-    gh secret set HUGGINGFACE_API_KEY --body "$HUGGINGFACE_API_KEY"
-    gh secret set KAKAO_MAP_API_KEY --body "$KAKAO_MAP_API_KEY"
-    gh secret set VERCEL_TOKEN --body "$VERCEL_TOKEN"
-    gh secret set VERCEL_ORG_ID --body "$VERCEL_ORG_ID"
-    gh secret set VERCEL_PROJECT_ID --body "$VERCEL_PROJECT_ID"
-    
-    echo "✅ 모든 시크릿이 GitHub Actions에 등록되었습니다."
-else
-    echo "❌ GitHub CLI(gh)가 설치되어 있지 않습니다. 시크릿 등록을 수동으로 진행하세요."
-    echo "GitHub CLI 설치: https://cli.github.com/manual/installation"
-    
-    echo "시크릿 목록 (GitHub 저장소 Settings -> Secrets -> Actions -> New repository secret 에서 등록):"
-    echo "SESSION_SECRET: [시크릿 값을 직접 입력하세요]"
-    echo "OPENAI_API_KEY: [시크릿 값을 직접 입력하세요]"
-    echo "DATABASE_URL: [시크릿 값을 직접 입력하세요]"
-    # 나머지 시크릿 정보 출력...
+# 현재 디렉토리가 저장소 루트인지 확인
+if [ ! -d ".git" ]; then
+  echo "이 스크립트는 저장소 루트에서 실행해야 합니다."
+  exit 1
 fi
 
-echo "GitHub 파이프라인 실행을 위해 깃 커밋 및 푸시를 진행하세요." 
+# GitHub CLI가 설치되어 있는지 확인
+if ! command -v gh &> /dev/null; then
+  echo "GitHub CLI(gh)가 설치되어 있지 않습니다."
+  echo "수동으로 GitHub 저장소에 다음 시크릿을 등록해주세요:"
+  cat << EOF
+  SESSION_SECRET: your_session_secret_here
+  OPENAI_API_KEY: your_openai_api_key_here
+  DATABASE_URL: postgresql://user:password@host:port/database
+  PGHOST: your_pg_host_here
+  PGUSER: your_pg_user_here
+  PGPASSWORD: your_pg_password_here
+  VITE_FIREBASE_API_KEY: your_firebase_api_key_here
+  VITE_FIREBASE_APP_ID: your_firebase_app_id_here
+  VITE_FIREBASE_PROJECT_ID: your_firebase_project_id_here
+  FIREBASE_DATABASE_URL: your_firebase_db_url_here
+  PUBMED_API_KEY: your_pubmed_api_key_here
+  GITHUB_TOKEN: your_github_token_here
+  HF_TOKEN: your_hf_token_here
+  HUGGINGFACE_TOKEN: your_huggingface_token_here
+  HUGGINGFACE_API_KEY: your_huggingface_api_key_here
+  KAKAO_MAP_API_KEY: your_kakao_map_api_key_here
+  VERCEL_TOKEN: your_vercel_token_here
+  VERCEL_ORG_ID: your_vercel_org_id_here
+  VERCEL_PROJECT_ID: your_vercel_project_id_here
+EOF
+  exit 1
+fi
+
+# GitHub가 로그인되어 있는지 확인
+if ! gh auth status &> /dev/null; then
+  echo "GitHub CLI에 로그인되어 있지 않습니다. 다음 명령어로 로그인해주세요:"
+  echo "gh auth login"
+  exit 1
+fi
+
+echo "GitHub Actions 시크릿을 등록합니다..."
+
+# 모든 시크릿 정의
+declare -A secrets=(
+  ["SESSION_SECRET"]="your_session_secret_here"
+  ["OPENAI_API_KEY"]="your_openai_api_key_here"
+  ["DATABASE_URL"]="postgresql://user:password@host:port/database"
+  ["PGHOST"]="your_pg_host_here"
+  ["PGUSER"]="your_pg_user_here"
+  ["PGPASSWORD"]="your_pg_password_here"
+  ["VITE_FIREBASE_API_KEY"]="your_firebase_api_key_here"
+  ["VITE_FIREBASE_APP_ID"]="your_firebase_app_id_here"
+  ["VITE_FIREBASE_PROJECT_ID"]="your_firebase_project_id_here"
+  ["FIREBASE_DATABASE_URL"]="your_firebase_db_url_here"
+  ["PUBMED_API_KEY"]="your_pubmed_api_key_here"
+  ["GITHUB_TOKEN"]="your_github_token_here"
+  ["HF_TOKEN"]="your_hf_token_here"
+  ["HUGGINGFACE_TOKEN"]="your_huggingface_token_here"
+  ["HUGGINGFACE_API_KEY"]="your_huggingface_api_key_here"
+  ["KAKAO_MAP_API_KEY"]="your_kakao_map_api_key_here"
+  ["VERCEL_TOKEN"]="your_vercel_token_here"
+  ["VERCEL_ORG_ID"]="your_vercel_org_id_here"
+  ["VERCEL_PROJECT_ID"]="your_vercel_project_id_here"
+)
+
+# 각 시크릿 등록
+for key in "${!secrets[@]}"; do
+  echo "시크릿 등록: $key"
+  gh secret set "$key" -b "${secrets[$key]}"
+done
+
+echo "시크릿 등록이 완료되었습니다!"
+echo "변경사항을 커밋하고 푸시하여 GitHub 파이프라인을 시작하세요." 
