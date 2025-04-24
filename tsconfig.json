@@ -1,36 +1,8 @@
 {
-  "include": [
-    "server/**/*.ts",
-    "client/src/**/*.ts",
-    "client/src/**/*.tsx",
-    "mobile/app/**/*.ts",
-    "mobile/app/**/*.tsx",
-    "shared/**/*.ts",
-    "scripts/**/*.ts"
-  ],
-  "exclude": ["node_modules", "dist", "build"],
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "moduleResolution": "node",
-    "strict": true,
-    "jsx": "react-jsx",
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowSyntheticDefaultImports": true,
-    "noImplicitAny": false,
-    "types": ["node"],
-    "baseUrl": ".",
-    "rootDirs": [".", "server", "client", "mobile"],
-    "paths": {
-      "@/*": ["client/src/*"],
-      "@server/*": ["server/*"],
-      "@mobile/*": ["mobile/app/*"],
-      "@shared/*": ["shared/*"]
-    },
-    "outDir": "dist"
-  }
+  "files": [],
+  "references": [
+    { "path": "./server" },
+    { "path": "./client" },
+    { "path": "./mobile" }
+  ]
 }

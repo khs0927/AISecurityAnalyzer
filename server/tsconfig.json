@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "outDir": "../dist/server",
+    "rootDir": ".",
+    "types": ["node"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "composite": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": [
+    "routes.ts",
+    "ai.ts",
+    "db.ts",
+    "socket/**",
+    "scripts/**"
+  ]
+} 

@@ -1,21 +1,13 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node"
-    }
+  "installCommand": "NPM_CONFIG_PRODUCTION=false pnpm i --frozen-lockfile",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist/public",
+  "framework": null,
+  "env": {},
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "server/index.ts" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "server/index.ts" }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "github": {
-    "silent": true,
-    "autoJobCancelation": true
-  }
+  "regions": ["iad1"]
 } 
