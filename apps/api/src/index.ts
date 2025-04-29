@@ -2,13 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import * as trpcExpress from '@trpc/server/adapters/express';
-import { createNetlifyHandler } from '@trpc/server/adapters/netlify'; // Netlify 어댑터 import
+import * as trpcExpress from '@trpc/server/adapters/express'; // Express 어댑터 사용
 import Pusher from 'pusher';
+import serverless from 'serverless-http'; // serverless-http import
 import { prisma } from './db';
 
 // --- tRPC 라우터 정의 (가정) --- 
-// 실제 라우터 정의가 필요합니다. 예를 들어:
 import { initTRPC } from '@trpc/server';
 import { z } from 'zod';
 
@@ -16,8 +15,15 @@ const t = initTRPC.context<{ prisma: typeof prisma }>().create();
 
 const appRouter = t.router({
   healthz: t.procedure.query(async ({ ctx }) => {
-    await ctx.prisma.$connect();
-    return { ok: true, env: process.env.NODE_ENV };
+    try {
+       await ctx.prisma.$connect();
+       return { ok: true, env: process.env.NODE_ENV };
+    } catch (error) {
+      // 에러 처리: Prisma 연결 실패 시에도 응답 반환
+      console.error("Prisma connection failed in healthz:", error);
+      // 실제 배포 환경에서는 에러 상세 내용은 숨기는 것이 좋음
+      return { ok: false, error: "Database connection failed", details: (error as Error).message }; 
+    }
   }),
   // 다른 tRPC 라우트...
 });
@@ -25,15 +31,22 @@ const appRouter = t.router({
 export type AppRouter = typeof appRouter;
 // --- tRPC 라우터 정의 끝 --- 
 
-// --- Express 앱 설정 (tRPC 미들웨어 외 다른 엔드포인트용) ---
+// --- Express 앱 설정 --- 
 const app = express();
 app.use(cors({
-  origin: ['https://nottoday.netlify.app', 'http://localhost:3000'],
+  // Netlify 함수 URL 및 로컬 개발 환경 허용 (필요시 조정)
+  origin: [process.env.NODE_ENV === 'production' ? 'https://your-netlify-site-url.netlify.app' : 'http://localhost:5173', 'http://localhost:3000'],
   credentials: true
 }));
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('combined'));
+
+// --- tRPC 미들웨어 적용 ---
+app.use('/trpc', trpcExpress.createExpressMiddleware({ 
+  router: appRouter,
+  createContext: () => ({ prisma })
+}));
 
 // --- Pusher 설정 --- 
 const pusher = new Pusher({
@@ -44,7 +57,7 @@ const pusher = new Pusher({
   useTLS: true,
 });
 
-// --- 추가 엔드포인트 (예: Pusher 웹훅, Express 경로) ---
+// --- 추가 엔드포인트 --- 
 app.post('/ecg-update', async (req, res) => {
   // ... (기존 로직)
 });
@@ -52,23 +65,12 @@ app.post('/risk-alert', async (req, res) => {
   // ... (기존 로직)
 });
 
-// --- Netlify 핸들러 생성 --- 
-// tRPC 요청을 처리하고, 나머지 요청은 Express 앱으로 전달
-export const handler = createNetlifyHandler({
-  router: appRouter,
-  createContext: () => ({ prisma }),
-  // Express 앱을 fallback으로 사용 (선택적)
-  // expressApp: app 
-});
+// --- Netlify 핸들러 생성 (serverless-http 사용) --- 
+export const handler = serverless(app);
 
 // --- 로컬 개발용 서버 시작 (Netlify 배포 시에는 사용되지 않음) --- 
 if (process.env.NODE_ENV === 'development') {
   const PORT = process.env.PORT || 8080;
-  // 로컬에서는 tRPC 미들웨어와 다른 라우트를 함께 사용
-  app.use('/trpc', trpcExpress.createExpressMiddleware({ 
-    router: appRouter,
-    createContext: () => ({ prisma })
-  }));
   app.listen(PORT, () => {
     console.log(`Local API server running: http://localhost:${PORT}`);
   });
