@@ -26,6 +26,9 @@ importers:
       dotenv:
         specifier: ^16.0.3
         version: 16.5.0
+      encoding:
+        specifier: ^0.1.13
+        version: 0.1.13
       express:
         specifier: ^4.18.2
         version: 4.21.2
@@ -55,7 +58,7 @@ importers:
         version: 1.4.5-lts.2
       openai:
         specifier: ^4.12.4
-        version: 4.96.0(zod@3.24.3)
+        version: 4.96.0(encoding@0.1.13)(zod@3.24.3)
       socket.io:
         specifier: ^4.6.1
         version: 4.8.1
@@ -152,7 +155,7 @@ importers:
         version: 1.10.0
       pusher:
         specifier: ^5.2.0
-        version: 5.2.0
+        version: 5.2.0(encoding@0.1.13)
       serverless-http:
         specifier: ^3.2.0
         version: 3.2.0
@@ -1957,6 +1960,9 @@ packages:
   encodeurl@2.0.0:
     resolution: {integrity: sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==}
     engines: {node: '>= 0.8'}
+
+  encoding@0.1.13:
+    resolution: {integrity: sha512-ETBauow1T35Y/WZMkio9jiM0Z5xjHHmJ4XmjZOq1l/dXz3lr2sRn87nJy20RupqSh1F2m3HHPSp8ShIPQJrJ3A==}
 
   engine.io-parser@5.2.3:
     resolution: {integrity: sha512-HqD3yTBfnBxIrbnM1DoD6Pcq8NECnh8d4As1Qgh0z5Gg3jRRIqijury0CL3ghu/edArpUYiYqQiDUQBIs4np3Q==}
@@ -5861,6 +5867,10 @@ snapshots:
 
   encodeurl@2.0.0: {}
 
+  encoding@0.1.13:
+    dependencies:
+      iconv-lite: 0.6.3
+
   engine.io-parser@5.2.3: {}
 
   engine.io@6.6.4:
@@ -7174,9 +7184,11 @@ snapshots:
 
   node-domexception@1.0.0: {}
 
-  node-fetch@2.7.0:
+  node-fetch@2.7.0(encoding@0.1.13):
     dependencies:
       whatwg-url: 5.0.0
+    optionalDependencies:
+      encoding: 0.1.13
 
   node-releases@2.0.19: {}
 
@@ -7248,7 +7260,7 @@ snapshots:
     dependencies:
       mimic-fn: 4.0.0
 
-  openai@4.96.0(zod@3.24.3):
+  openai@4.96.0(encoding@0.1.13)(zod@3.24.3):
     dependencies:
       '@types/node': 18.19.87
       '@types/node-fetch': 2.6.12
@@ -7256,7 +7268,7 @@ snapshots:
       agentkeepalive: 4.6.0
       form-data-encoder: 1.7.2
       formdata-node: 4.4.1
-      node-fetch: 2.7.0
+      node-fetch: 2.7.0(encoding@0.1.13)
     optionalDependencies:
       zod: 3.24.3
     transitivePeerDependencies:
@@ -7426,12 +7438,12 @@ snapshots:
     dependencies:
       tweetnacl: 1.0.3
 
-  pusher@5.2.0:
+  pusher@5.2.0(encoding@0.1.13):
     dependencies:
       '@types/node-fetch': 2.6.12
       abort-controller: 3.0.0
       is-base64: 1.1.0
-      node-fetch: 2.7.0
+      node-fetch: 2.7.0(encoding@0.1.13)
       tweetnacl: 1.0.3
       tweetnacl-util: 0.15.1
     transitivePeerDependencies:
