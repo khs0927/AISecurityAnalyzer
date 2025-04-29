@@ -1,3 +1,6 @@
 [submodule "NotToday"]
 	path = NotToday
 	url = https://github.com/khs0927/NotToday
+[submodule "ai-agent"]
+	path = ai-agent
+	url = https://github.com/khs0927/medical-ai-agent
