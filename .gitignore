@@ -203,3 +203,6 @@ docker-compose.override.yml
 # 운영체제 파일
 .DS_Store
 Thumbs.db
+
+# Local Netlify folder
+.netlify

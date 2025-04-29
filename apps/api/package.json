@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsup src/index.ts --out-dir dist",
+    "build": "tsup", 
     "test": "vitest",
     "generate-client": "prisma generate",
     "db-push": "prisma db push"
@@ -16,15 +16,15 @@
     "morgan": "^1.10.0",
     "@trpc/server": "^10.45.1",
     "@trpc/client": "^10.45.1",
-    "zod": "^3.24.4",
-    "jsonwebtoken": "^10.0.0",
+    "zod": "^3.24.3",
+    "jsonwebtoken": "^9.0.2",
     "@prisma/client": "^5.13.0",
-    "@pusher/pusher-http-server": "^5.2.0",
+    "pusher": "^5.2.0",
     "@domain": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.7.0",
-    "tsup": "^8.0.1",
+    "tsup": "^8.4.0",
     "typescript": "^5.4.3",
     "@types/express": "^5.0.0",
     "@types/morgan": "^1.9.9",

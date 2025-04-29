@@ -1,17 +1,29 @@
 [build]
-  base = "client/"
-  publish = "dist/"
-  command = "pnpm build"
+  publish = "apps/web/dist"
+  # 단순화된 빌드 명령어:
+  command = "pnpm install && pnpm --filter web build && pnpm --filter api build"
+
+[functions]
+  # tsup이 직접 출력하므로 디렉토리 지정
+  directory = "netlify/functions"
+
+# [[plugins]] # 플러그인 제거
+#  package = "@netlify/plugin-functions-install-core"
 
 [context.production.environment]
-  VITE_API_URL = "https://api.nottoday-medical.xyz"
-  VITE_PUSHER_APP_KEY = "pusher-app-key"
-  VITE_PUSHER_CLUSTER = "ap3"
+  VITE_API_URL = "/.netlify/functions/api" # API 경로 확인 필요 (tsup 출력 이름 기준)
+  NODE_ENV = "production"
 
 [context.staging.environment]
-  VITE_API_URL = "https://staging-api.nottoday-medical.xyz"
-  VITE_PUSHER_APP_KEY = "staging-pusher-app-key"
-  VITE_PUSHER_CLUSTER = "ap3"
+  VITE_API_URL = "/.netlify/functions/api" # API 경로 확인 필요 (tsup 출력 이름 기준)
+  NODE_ENV = "staging"
+
+[[redirects]]
+  from = "/api/*"
+  # tsup 출력 파일 이름(api.cjs)과 일치하도록 수정
+  to = "/.netlify/functions/api/:splat" 
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
@@ -23,4 +35,3 @@
   [headers.values]
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' wss://*.pusherapp.com https://api.nottoday.app; img-src 'self' data:; style-src 'self' 'unsafe-inline';" 
