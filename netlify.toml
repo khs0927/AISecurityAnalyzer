@@ -1,7 +1,7 @@
 [build]
   publish = "apps/web/dist"
   # 단순화된 빌드 명령어:
-  command = "pnpm install && pnpm --filter web build && pnpm --filter api build"
+  command = "pnpm install --prod=false && pnpm --filter web build && pnpm --filter api build"
 
 [functions]
   # tsup이 직접 출력하므로 디렉토리 지정
