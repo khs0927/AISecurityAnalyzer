@@ -4,7 +4,7 @@
   command = "pnpm install --prod=false && pnpm --filter web build && pnpm --filter api build"
   # 개발 의존성 설치를 위한 환경 변수 추가
   [build.environment]
-    NPM_FLAGS = "--production=false"
+    PNPM_FLAGS = "--production=false"
 
 [functions]
   # tsup이 직접 출력하므로 디렉토리 지정
