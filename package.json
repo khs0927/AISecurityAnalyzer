@@ -4,9 +4,9 @@
   "packageManager": "pnpm@9.4.0",
   "workspaces": ["apps/*", "packages/*", "scripts"],
   "scripts": {
-    "dev": "NODE_ENV=development nodemon --exec ts-node --esm server/index.ts",
-    "build": "tsc -b server && vite build",
-    "start": "NODE_ENV=production node dist/server/index.js",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "NODE_ENV=production node apps/api/dist/index.js",
     "lint": "eslint --ext .ts,.tsx .",
     "format": "prettier --write .",
     "test": "jest",
@@ -59,6 +59,7 @@
     "cron": "^2.3.0",
     "openai": "^4.12.4",
     "marked": "^5.0.0",
-    "validator": "^13.9.0"
+    "validator": "^13.9.0",
+    "wouter": "^3.0.0"
   }
 }
