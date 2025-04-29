@@ -37,14 +37,14 @@ export default defineConfig({
     assetsDir: "assets", // Default is usually fine
     rollupOptions: { // Keep rollup options if they are still valid
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-hook-form', 'react-icons', 'wouter'],
-          ui: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', 
-               '@radix-ui/react-label', '@radix-ui/react-popover', '@radix-ui/react-select', 
-               '@radix-ui/react-slot', 'class-variance-authority', 'tailwind-merge'],
-          charts: ['chart.js', 'react-chartjs-2', 'recharts'],
-          utils: ['zod', 'date-fns', 'clsx']
-        }
+        // manualChunks: {
+        //   vendor: ['react', 'react-dom', 'react-hook-form', 'react-icons', 'wouter'],
+        //   ui: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', 
+        //        '@radix-ui/react-label', '@radix-ui/react-popover', '@radix-ui/react-select', 
+        //        '@radix-ui/react-slot', 'class-variance-authority', 'tailwind-merge'],
+        //   charts: ['chart.js', 'react-chartjs-2', 'recharts'],
+        //   utils: ['zod', 'date-fns', 'clsx']
+        // }
       }
     },
     sourcemap: true, // Consider disabling for production to reduce size
