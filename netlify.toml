@@ -1,5 +1,5 @@
 [build]
-  publish = "apps/web/dist"
+  publish = "client/dist/public"
   # 단순화된 빌드 명령어:
   command = "pnpm install && pnpm --filter web build && pnpm --filter api build"
 
