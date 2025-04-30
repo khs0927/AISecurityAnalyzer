@@ -1,7 +1,7 @@
 [build]
   publish = "client/dist"
-  # 빌드 명령어 수정: --no-frozen-lockfile 옵션 제거
-  command = "pnpm install --prod=false && pnpm exec vite build --root client --outDir client/dist && pnpm --filter api build"
+  # 빌드 명령어 수정: vite build 명령어 구문 수정 (--root client -> client)
+  command = "pnpm install --prod=false && pnpm exec vite build client --outDir client/dist && pnpm --filter api build"
   # 개발 의존성 설치를 위한 환경 변수 추가
   [build.environment]
     PNPM_FLAGS = "--production=false"
