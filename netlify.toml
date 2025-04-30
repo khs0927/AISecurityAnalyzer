@@ -1,10 +1,11 @@
 [build]
   publish = "client/dist"
-  # 빌드 명령어 수정: vite build 명령어 구문 수정 (--root client -> client)
-  command = "pnpm install --prod=false && pnpm exec vite build client --outDir client/dist && pnpm --filter api build"
+  # 빌드 명령어 수정: client 패키지의 build 스크립트 사용
+  command = "pnpm install --prod=false && pnpm --filter client run build && pnpm --filter api build"
   # 개발 의존성 설치를 위한 환경 변수 추가
   [build.environment]
     PNPM_FLAGS = "--production=false"
+    NODE_VERSION = "18" # Node.js 버전 고정 (로그에서 18.18.0 사용 확인)
 
 [functions]
   # tsup이 직접 출력하므로 디렉토리 지정
