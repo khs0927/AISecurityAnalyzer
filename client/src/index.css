@@ -1,9 +1,5 @@
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUITE/fonts/static/woff2/SUITE.css');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* 애니메이션 */
 @keyframes float {
   0% {
@@ -129,11 +125,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border: 1px solid #ccc;
   }
 
   body {
-    @apply font-sans antialiased bg-[#f5f7fa] text-foreground;
+    background-color: #f5f7fa;
     font-family: 'SUITE', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
