@@ -1,7 +1,7 @@
 [build]
   publish = "client/dist"
   # 빌드 명령어 수정: 클라이언트 빌드와 API 빌드를 명확하게 지정
-  command = "SKIP_DEPENDENCY_CHECK=true pnpm install --prod=false --no-frozen-lockfile && cd client && pnpm run build && cd ../apps/api && pnpm run build"
+  command = "SKIP_DEPENDENCY_CHECK=true pnpm install --prod=false --no-frozen-lockfile --force && cd client && pnpm run build && cd ../apps/api && pnpm run build"
   # 개발 의존성 설치를 위한 환경 변수 추가
   [build.environment]
     PNPM_FLAGS = "--production=false"
@@ -9,7 +9,10 @@
     NPM_FLAGS = "--legacy-peer-deps"
     SKIP_DEPENDENCY_CHECK = "true"
     # 캐시 버스팅을 위한 타임스탬프 변수
-    CACHE_BUSTER = "2025-05-24-12-54"
+    CACHE_BUSTER = "2023-09-30-0001"
+    NETLIFY_USE_YARN = "false"
+    NETLIFY_USE_PNPM = "true"
+    NETLIFY_USE_NPM_FLAGS = "--no-package-lock"
 
 [functions]
   # tsup이 직접 출력하므로 디렉토리 지정
