@@ -1,11 +1,13 @@
 [build]
   publish = "client/dist"
-  # 빌드 명령어 수정: client 패키지의 build 스크립트 사용
-  command = "pnpm install --prod=false && pnpm --filter client run build && pnpm --filter api build"
+  # 빌드 명령어 수정: 클라이언트 빌드와 API 빌드를 명확하게 지정
+  command = "SKIP_DEPENDENCY_CHECK=true pnpm install --prod=false && cd client && pnpm run build && cd ../apps/api && pnpm run build"
   # 개발 의존성 설치를 위한 환경 변수 추가
   [build.environment]
     PNPM_FLAGS = "--production=false"
     NODE_VERSION = "18" # Node.js 버전 고정 (로그에서 18.18.0 사용 확인)
+    NPM_FLAGS = "--legacy-peer-deps"
+    SKIP_DEPENDENCY_CHECK = "true"
 
 [functions]
   # tsup이 직접 출력하므로 디렉토리 지정
@@ -17,10 +19,12 @@
 [context.production.environment]
   VITE_API_URL = "/.netlify/functions/api" # API 경로 확인 필요 (tsup 출력 이름 기준)
   NODE_ENV = "production"
+  SKIP_DEPENDENCY_CHECK = "true"
 
 [context.staging.environment]
   VITE_API_URL = "/.netlify/functions/api" # API 경로 확인 필요 (tsup 출력 이름 기준)
   NODE_ENV = "staging"
+  SKIP_DEPENDENCY_CHECK = "true"
 
 [[redirects]]
   from = "/api/*"
