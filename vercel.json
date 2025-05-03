@@ -1,8 +1,14 @@
 {
-  "buildCommand": "pnpm install --no-frozen-lockfile && turbo run build --filter=apps/web",
+  "version": 2,
+  "buildCommand": "pnpm install --no-frozen-lockfile && turbo run build --filter=api --filter=web",
   "outputDirectory": "apps/web/dist",
+  "functions": {
+    "apps/api/dist/**/*.js": {
+      "runtime": "@vercel/node"
+    }
+  },
   "routes": [
-    { "src": "/api/(.*)", "dest": "apps/api/dist/$1" },
-    { "src": "/(.*)",     "dest": "apps/web/dist/$1" }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/apps/web/dist/index.html" }
   ]
 } 
