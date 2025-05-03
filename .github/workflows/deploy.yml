@@ -40,7 +40,7 @@ jobs:
           run_install: false
           
       - name: pnpm 설치
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
         
       - name: 의존성 감사
         id: audit
@@ -129,7 +129,7 @@ jobs:
       - name: 의존성 설치
         run: |
           cd apps/api
-          pnpm install
+          pnpm install --no-frozen-lockfile
           
       - name: API 빌드
         run: |
@@ -165,7 +165,7 @@ jobs:
       - name: 의존성 설치
         run: |
           cd apps/web
-          pnpm install
+          pnpm install --no-frozen-lockfile
           
       - name: 웹 빌드
         run: |
