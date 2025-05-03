@@ -1,11 +1,6 @@
 {
   "buildCommand": "pnpm install --no-frozen-lockfile && turbo run build --filter=apps/web",
   "outputDirectory": "apps/web/dist",
-  "functions": {
-    "api/**": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "routes": [
     { "src": "/api/(.*)", "dest": "apps/api/dist/$1" },
     { "src": "/(.*)",     "dest": "apps/web/dist/$1" }
