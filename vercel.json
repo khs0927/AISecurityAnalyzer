@@ -2,7 +2,9 @@
   "buildCommand": "pnpm install --no-frozen-lockfile && turbo run build --filter=apps/web",
   "outputDirectory": "apps/web/dist",
   "functions": {
-    "api/**.[tj]s": { "runtime": "nodejs20.x" }
+    "api/**": {
+      "runtime": "@vercel/node@2.x"
+    }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "apps/api/dist/$1" },
