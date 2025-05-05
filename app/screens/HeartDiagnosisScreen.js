@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,19 +6,93 @@ import {
   TouchableOpacity, 
   ScrollView, 
   Dimensions,
-  SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { firebase } from '../../mobile/src/lib/firebase';
+import useHeartRate from '../../mobile/src/hooks/useHeartRate';
 
 const { width } = Dimensions.get('window');
 
 const HeartDiagnosisScreen = ({ webAppData, refreshData, loading }) => {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('monitoring');
+  const [isMonitoring, setIsMonitoring] = useState(false);
   
-  // 가상의 ECG 데이터
-  const ecgData = Array(100).fill(0).map((_, i) => Math.sin(i / 10) * 50 + Math.random() * 20);
+  // 실시간 심박수 데이터 훅 사용
+  const { heartRate, error, isLoading } = useHeartRate(isMonitoring ? 5 : 0); // 모니터링 중일 때만 5초 간격으로 데이터 수신
+  
+  // 심박수 이력 데이터 (최근 10개)
+  const [heartRateHistory, setHeartRateHistory] = useState([]);
+  
+  // Firebase에서 사용자의 심박수 이력 가져오기
+  useEffect(() => {
+    const uid = firebase.auth().currentUser?.uid;
+    if (!uid) return;
+    
+    const unsubscribe = firebase.firestore()
+      .collection(`users/${uid}/vitals`)
+      .where('type', '==', 'heartRate')
+      .orderBy('timestamp', 'desc')
+      .limit(10)
+      .onSnapshot(snapshot => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate() || new Date()
+        }));
+        setHeartRateHistory(data);
+      }, error => {
+        console.error('심박수 이력 데이터를 가져오는 중 오류 발생:', error);
+      });
+      
+    return () => unsubscribe();
+  }, []);
+  
+  // 측정 시작/중지 함수
+  const toggleMonitoring = () => {
+    if (!isMonitoring) {
+      // 권한 확인 및 측정 시작
+      startMonitoring();
+    } else {
+      // 측정 중지
+      setIsMonitoring(false);
+    }
+  };
+  
+  // 측정 시작 함수
+  const startMonitoring = async () => {
+    try {
+      // 여기서는 useHeartRate 훅이 권한 요청을 처리하므로
+      // 단순히 상태만 변경합니다.
+      setIsMonitoring(true);
+    } catch (error) {
+      console.error('측정 시작 중 오류 발생:', error);
+      Alert.alert(
+        '측정 오류',
+        '심박수 측정을 시작하는 중 오류가 발생했습니다. 앱 권한을 확인해주세요.',
+        [{ text: '확인' }]
+      );
+    }
+  };
+  
+  // ECG 데이터 시각화 (가상 데이터)
+  const generateEcgData = () => {
+    // 심박수에 따라 ECG 파형 주파수 조정
+    const bpm = heartRate?.value || webAppData?.healthData?.heartRate || 70;
+    const frequency = bpm / 60; // 초당 심박수
+    
+    return Array(100).fill(0).map((_, i) => 
+      Math.sin(i / (10 / frequency)) * 50 + 
+      Math.sin(i / 5) * 10 + // P파 시뮬레이션
+      (i % 20 === 0 ? 80 : 0) + // QRS 복합체 시뮬레이션
+      Math.random() * 5 // 노이즈
+    );
+  };
+  
+  const ecgData = generateEcgData();
   
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -26,7 +100,10 @@ const HeartDiagnosisScreen = ({ webAppData, refreshData, loading }) => {
         {/* 헤더 */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>심장진단</Text>
-          <TouchableOpacity style={styles.settingsButton}>
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={() => navigation.navigate('비상연락')}
+          >
             <Ionicons name="settings-outline" size={24} color="#333" />
           </TouchableOpacity>
         </View>
@@ -120,10 +197,16 @@ const HeartDiagnosisScreen = ({ webAppData, refreshData, loading }) => {
                     <Text style={styles.statusLabel}>심박수</Text>
                     <View style={styles.statusValueContainer}>
                       <Text style={styles.statusValue}>
-                        {webAppData?.healthData?.heartRate || '--'}
+                        {heartRate?.value || webAppData?.healthData?.heartRate || '--'}
                       </Text>
                       <Text style={styles.statusUnit}>bpm</Text>
                     </View>
+                    {isMonitoring && (
+                      <View style={styles.liveIndicator}>
+                        <View style={styles.liveIndicatorDot} />
+                        <Text style={styles.liveIndicatorText}>실시간</Text>
+                      </View>
+                    )}
                   </View>
                   
                   <View style={styles.statusItem}>
@@ -163,7 +246,9 @@ const HeartDiagnosisScreen = ({ webAppData, refreshData, loading }) => {
                 </View>
                 
                 <Text style={styles.updateTime}>
-                  {webAppData?.healthData?.lastUpdated ? 
+                  {heartRate?.timestamp ? 
+                    `최근 업데이트: ${heartRate.timestamp.toLocaleString()}` : 
+                    webAppData?.healthData?.lastUpdated ? 
                     `최근 업데이트: ${new Date(webAppData.healthData.lastUpdated).toLocaleString()}` : 
                     '업데이트 정보 없음'
                   }
@@ -181,7 +266,7 @@ const HeartDiagnosisScreen = ({ webAppData, refreshData, loading }) => {
                 
                 <View style={styles.ecgGraphContainer}>
                   <View style={styles.ecgGraph}>
-                    {/* 가상의 ECG 선 그래프 */}
+                    {/* ECG 선 그래프 */}
                     <View style={styles.ecgLineContainer}>
                       {ecgData.map((value, index) => (
                         <View 
@@ -202,20 +287,34 @@ const HeartDiagnosisScreen = ({ webAppData, refreshData, loading }) => {
                 <View style={styles.ecgStatus}>
                   <View style={styles.normalStatus}>
                     <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                    <Text style={styles.normalStatusText}>정상 심박동</Text>
+                    <Text style={styles.normalStatusText}>
+                      {isMonitoring ? '측정 중...' : '정상 심박동'}
+                    </Text>
                   </View>
                   
                   <Text style={styles.bpmText}>
-                    {webAppData?.healthData?.heartRate || '--'} BPM
+                    {heartRate?.value || webAppData?.healthData?.heartRate || '--'} BPM
                   </Text>
                 </View>
               </View>
               
               {/* 측정 버튼 영역 */}
               <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.measureButton}>
-                  <Ionicons name="pulse" size={24} color="#fff" />
-                  <Text style={styles.measureButtonText}>심전도 측정</Text>
+                <TouchableOpacity 
+                  style={[
+                    styles.measureButton,
+                    isMonitoring && styles.stopButton
+                  ]}
+                  onPress={toggleMonitoring}
+                >
+                  <Ionicons 
+                    name={isMonitoring ? "stop-circle" : "pulse"} 
+                    size={24} 
+                    color="#fff" 
+                  />
+                  <Text style={styles.measureButtonText}>
+                    {isMonitoring ? '측정 중지' : '심전도 측정'}
+                  </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity style={styles.shareButton}>
@@ -248,24 +347,54 @@ const HeartDiagnosisScreen = ({ webAppData, refreshData, loading }) => {
                 <View style={styles.tipContent}>
                   <Text style={styles.tipTitle}>측정 팁</Text>
                   <Text style={styles.tipText}>
-                    정확한 측정을 위해 안정된 자세로 30초간 움직이지 말고 기다려주세요.
+                    정확한 심전도 측정을 위해 스마트워치를 손목에 꼭 맞게 착용하고, 
+                    측정 중에는 움직임을 최소화하세요.
                   </Text>
                 </View>
               </View>
+            </View>
+          )}
+
+          {activeTab === 'history' && (
+            <View style={styles.historyContent}>
+              <Text style={styles.historyTitle}>최근 심박수 기록</Text>
+              
+              {heartRateHistory.length > 0 ? (
+                heartRateHistory.map((item, index) => (
+                  <View key={item.id || index} style={styles.historyItem}>
+                    <View style={styles.historyItemInfo}>
+                      <Text style={styles.historyItemDate}>
+                        {item.timestamp.toLocaleString()}
+                      </Text>
+                      <Text style={styles.historyItemSource}>
+                        출처: {item.source || '앱'}
+                      </Text>
+                    </View>
+                    <View style={styles.historyItemValue}>
+                      <Text style={styles.historyItemBpm}>
+                        {item.bpm}
+                      </Text>
+                      <Text style={styles.historyItemUnit}>BPM</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyHistory}>
+                  <Ionicons name="pulse" size={40} color="#ddd" />
+                  <Text style={styles.emptyHistoryText}>
+                    측정 기록이 없습니다.
+                  </Text>
+                  <Text style={styles.emptyHistorySubText}>
+                    '심전도 측정' 버튼을 눌러 첫 측정을 시작하세요.
+                  </Text>
+                </View>
+              )}
             </View>
           )}
           
           {activeTab === 'risk' && (
             <View style={styles.riskContent}>
               <Text style={styles.contentTitle}>위험도 분석</Text>
-              <Text style={styles.comingSoonText}>웹 애플리케이션과 연동 중입니다.
-              모바일 애플리케이션에서 곧 사용 가능합니다.</Text>
-            </View>
-          )}
-          
-          {activeTab === 'history' && (
-            <View style={styles.historyContent}>
-              <Text style={styles.contentTitle}>측정 기록</Text>
               <Text style={styles.comingSoonText}>웹 애플리케이션과 연동 중입니다.
               모바일 애플리케이션에서 곧 사용 가능합니다.</Text>
             </View>
@@ -291,49 +420,44 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
   },
   settingsButton: {
-    padding: 4,
+    padding: 5,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    justifyContent: 'space-between',
     paddingHorizontal: 10,
-    paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#f0f0f0',
   },
   tabButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginHorizontal: 4,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
   },
   activeTabButton: {
-    backgroundColor: '#FFE2E9',
+    borderBottomWidth: 2,
+    borderBottomColor: '#FF6D94',
   },
   tabText: {
-    fontSize: 12,
+    marginLeft: 5,
+    fontSize: 14,
     color: '#666',
-    marginLeft: 4,
   },
   activeTabText: {
     color: '#FF6D94',
@@ -343,18 +467,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   monitoringContent: {
-    padding: 20,
+    padding: 15,
   },
   statusCard: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 12,
+    padding: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginBottom: 20,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 15,
   },
   statusRow: {
     flexDirection: 'row',
@@ -362,7 +486,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   statusItem: {
-    width: '48%',
+    flex: 1,
+    alignItems: 'center',
   },
   statusLabel: {
     fontSize: 14,
@@ -371,72 +496,75 @@ const styles = StyleSheet.create({
   },
   statusValueContainer: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'flex-end',
   },
   statusValue: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
   statusUnit: {
     fontSize: 14,
     color: '#666',
-    marginLeft: 4,
+    marginLeft: 2,
+    marginBottom: 4,
   },
   updateTime: {
     fontSize: 12,
-    color: '#999',
-    textAlign: 'right',
-    marginTop: 10,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 5,
   },
   ecgCard: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 12,
+    padding: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginBottom: 20,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 15,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
   ecgGraphContainer: {
     height: 120,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 10,
-    justifyContent: 'center',
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   ecgGraph: {
-    height: 80,
-    justifyContent: 'center',
-  },
-  ecgLineContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  ecgLineContainer: {
+    flex: 1,
     height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   ecgLine: {
     width: 2,
     backgroundColor: '#FF6D94',
-    marginHorizontal: 1,
+    marginRight: 1,
   },
   ecgStatus: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 15,
   },
   normalStatus: {
     flexDirection: 'row',
@@ -445,58 +573,61 @@ const styles = StyleSheet.create({
   normalStatusText: {
     fontSize: 14,
     color: '#4CAF50',
-    fontWeight: 'bold',
     marginLeft: 5,
   },
   bpmText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#FF6D94',
   },
   actionButtons: {
-    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
   },
   measureButton: {
     backgroundColor: '#FF6D94',
-    borderRadius: 20,
-    paddingVertical: 15,
+    borderRadius: 30,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#FF6D94',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flex: 3,
+    marginRight: 10,
+  },
+  stopButton: {
+    backgroundColor: '#FF4757',
   },
   measureButtonText: {
     color: '#fff',
-    fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 10,
+    fontSize: 16,
+    marginLeft: 8,
   },
   shareButton: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 12,
+    borderRadius: 30,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flex: 2,
     borderWidth: 1,
     borderColor: '#FF6D94',
   },
   shareButtonText: {
     color: '#FF6D94',
-    fontSize: 14,
     fontWeight: 'bold',
-    marginLeft: 8,
+    fontSize: 14,
+    marginLeft: 5,
   },
   webSyncInfoCard: {
     backgroundColor: '#E3F2FD',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
   },
   webSyncHeader: {
     flexDirection: 'row',
@@ -511,36 +642,40 @@ const styles = StyleSheet.create({
   },
   webSyncText: {
     fontSize: 14,
-    color: '#0D47A1',
+    color: '#333',
     marginBottom: 10,
-    lineHeight: 20,
   },
   webSyncButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start',
   },
   webSyncButtonText: {
     fontSize: 14,
     color: '#2196F3',
-    fontWeight: 'bold',
-    marginRight: 4,
+    fontWeight: '500',
+    marginRight: 5,
   },
   tipCard: {
-    backgroundColor: '#E3F2FD',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
     flexDirection: 'row',
-    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 15,
   },
   tipIconContainer: {
+    backgroundColor: '#FF6D94',
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    justifyContent: 'center',
+    marginRight: 12,
   },
   tipContent: {
     flex: 1,
@@ -548,24 +683,100 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0D47A1',
+    color: '#333',
     marginBottom: 5,
   },
   tipText: {
     fontSize: 14,
-    color: '#0D47A1',
+    color: '#666',
     lineHeight: 20,
   },
-  contentTitle: {
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  liveIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF4757',
+    marginRight: 4,
+  },
+  liveIndicatorText: {
+    fontSize: 12,
+    color: '#FF4757',
+    fontWeight: '500',
+  },
+  historyContent: {
+    padding: 15,
+  },
+  historyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 15,
   },
-  riskContent: {
-    padding: 20,
+  historyItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  historyContent: {
+  historyItemInfo: {
+    flex: 3,
+  },
+  historyItemDate: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+    marginBottom: 3,
+  },
+  historyItemSource: {
+    fontSize: 12,
+    color: '#888',
+  },
+  historyItemValue: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  historyItemBpm: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF6D94',
+  },
+  historyItemUnit: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 3,
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+  },
+  emptyHistoryText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 10,
+  },
+  emptyHistorySubText: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  riskContent: {
     padding: 20,
   },
   aiContent: {
@@ -577,7 +788,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     lineHeight: 20,
-  }
+  },
+  contentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
 });
 
 export default HeartDiagnosisScreen;

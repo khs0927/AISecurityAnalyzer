@@ -12,6 +12,9 @@ import EmergencyGuideScreen from './app/screens/EmergencyGuideScreen';
 import EmergencyContactsScreen from './app/screens/EmergencyContactsScreen';
 import EmergencyGuideDetailScreen from './app/screens/EmergencyGuideDetailScreen';
 import AiConsultationScreen from './app/screens/AiConsultationScreen';
+import FirstAidScreen from './app/screens/FirstAidScreen';
+import NearbyHospitalsScreen from './app/screens/NearbyHospitalsScreen';
+import WatchSettingsScreen from './app/screens/WatchSettingsScreen';
 
 const Tab = createBottomTabNavigator();
 // 실제 배포 시에는 @react-navigation/stack 패키지 설치 필요
@@ -20,6 +23,20 @@ const Tab = createBottomTabNavigator();
 const Stack = { 
   Navigator: ({ children, screenOptions }) => <>{children}</>,
   Screen: ({ children }) => <>{children}</>
+};
+
+// 홈 스택 네비게이션
+const HomeStack = ({ webAppData, refreshData, loading }) => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain">
+        {(props) => <HomeScreen {...props} webAppData={webAppData} refreshData={refreshData} loading={loading} />}
+      </Stack.Screen>
+      <Stack.Screen name="WatchSettings">
+        {(props) => <WatchSettingsScreen {...props} webAppData={webAppData} refreshData={refreshData} loading={loading} />}
+      </Stack.Screen>
+    </Stack.Navigator>
+  );
 };
 
 // 심장진단 스택 네비게이션
@@ -155,17 +172,6 @@ export default function App() {
     fetchWebAppData();
   }, []);
 
-  // 각 화면에 웹 앱 데이터 전달을 위한 함수
-  const renderScreen = (Screen, name) => {
-    return (
-      <Screen 
-        webAppData={webAppData} 
-        refreshData={fetchWebAppData}
-        loading={loading}
-      />
-    );
-  };
-
   return (
     <NavigationContainer>
       <Tab.Navigator
@@ -177,10 +183,12 @@ export default function App() {
               iconName = focused ? 'home' : 'home-outline';
             } else if (route.name === '심장진단') {
               iconName = focused ? 'heart' : 'heart-outline';
+            } else if (route.name === 'AI 상담') {
+              iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
             } else if (route.name === '응급처치') {
               iconName = focused ? 'medkit' : 'medkit-outline';
-            } else if (route.name === '비상연락') {
-              iconName = focused ? 'call' : 'call-outline';
+            } else if (route.name === '주변병원') {
+              iconName = focused ? 'location' : 'location-outline';
             }
             
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -191,19 +199,23 @@ export default function App() {
         })}
       >
         <Tab.Screen name="홈">
-          {(props) => <HomeScreen {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
+          {(props) => <HomeStack {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
         </Tab.Screen>
         
         <Tab.Screen name="심장진단">
-          {(props) => <HeartDiagnosisStack {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
+          {(props) => <HeartDiagnosisScreen {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
+        </Tab.Screen>
+        
+        <Tab.Screen name="AI 상담">
+          {(props) => <AiConsultationScreen {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
         </Tab.Screen>
         
         <Tab.Screen name="응급처치">
-          {(props) => <EmergencyGuideStack {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
+          {(props) => <FirstAidScreen {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
         </Tab.Screen>
         
-        <Tab.Screen name="비상연락">
-          {(props) => <EmergencyContactsScreen {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
+        <Tab.Screen name="주변병원">
+          {(props) => <NearbyHospitalsScreen {...props} webAppData={webAppData} refreshData={fetchWebAppData} loading={loading} />}
         </Tab.Screen>
       </Tab.Navigator>
       <StatusBar style="auto" />

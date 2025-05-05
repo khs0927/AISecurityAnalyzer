@@ -87,10 +87,13 @@ const HomeScreen = ({ webAppData, refreshData, loading }) => {
             </Text>
           </View>
           <View style={styles.headerRight}>
-            <View style={[
-              styles.connectionIndicator, 
-              webAppData?.watchConnected ? styles.connected : styles.disconnected
-            ]}>
+            <TouchableOpacity 
+              style={[
+                styles.connectionIndicator, 
+                webAppData?.watchConnected ? styles.connected : styles.disconnected
+              ]}
+              onPress={() => navigation.navigate('WatchSettings')}
+            >
               <Ionicons 
                 name="watch-outline" 
                 size={14} 
@@ -103,7 +106,7 @@ const HomeScreen = ({ webAppData, refreshData, loading }) => {
               }}>
                 {webAppData?.watchConnected ? '연결됨' : '연결 안됨'}
               </Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.profileButton}>
               <Ionicons name="person-circle-outline" size={32} color="#333" />
             </TouchableOpacity>
@@ -161,12 +164,12 @@ const HomeScreen = ({ webAppData, refreshData, loading }) => {
             
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => navigation.navigate('심장진단', { screen: 'AI상담' })}
+              onPress={() => navigation.navigate('WatchSettings')}
             >
-              <View style={[styles.actionIcon, {backgroundColor: '#E1F5FE'}]}>
-                <Ionicons name="chatbubbles" size={24} color="#03A9F4" />
+              <View style={[styles.actionIcon, {backgroundColor: '#FFF3E0'}]}>
+                <Ionicons name="watch" size={24} color="#FF9800" />
               </View>
-              <Text style={styles.actionText}>AI 상담</Text>
+              <Text style={styles.actionText}>워치 설정</Text>
             </TouchableOpacity>
           </View>
         </View>

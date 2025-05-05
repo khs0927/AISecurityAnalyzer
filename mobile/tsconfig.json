@@ -2,14 +2,20 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "moduleResolution": "Node",
     "jsx": "react-jsx",
     "outDir": "../dist/mobile",
     "rootDir": "app",
     "baseUrl": "app",
     "paths": {
-      "@/*": ["*"]
+      "@/*": [
+        "*"
+      ]
     },
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -19,6 +25,14 @@
     "allowSyntheticDefaultImports": true,
     "composite": true
   },
-  "include": ["app/**/*.ts", "app/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "build"]
-} 
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ],
+  "extends": "expo/tsconfig.base"
+}
